@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class TrashZone : MonoBehaviour
 {
-    private void OnTriggerEnter(Collider other)
+    private void OnTriggerStay(Collider other)
     {
         // 触れたものが「原子（Atom）」かどうか確認する
         Atom targetAtom = other.GetComponentInParent<Atom>();

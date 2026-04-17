@@ -3,8 +3,10 @@ using UnityEngine;
 public class BondPoint : MonoBehaviour
 {
     [Header("Bond Status")]
-    public bool IsConnected = false;
+    // public bool IsConnected = false;
     public Atom ParentAtom;
+    public bool IsConnected { get; private set; }
+    public BondPoint ConnectedTarget { get; private set; }
     
     // 今近づいている相手の腕（プレビュー用）
     public BondPoint HoverTarget; 
@@ -40,13 +42,17 @@ public class BondPoint : MonoBehaviour
         }
     }
 
-    public void Connect(BondPoint other)
+    // 結合を実行したときに呼ばれる
+    public void ConnectTo(BondPoint target)
     {
         IsConnected = true;
+        ConnectedTarget = target;
     }
 
+    // 分離したときに呼ばれる
     public void Disconnect()
     {
         IsConnected = false;
+        ConnectedTarget = null;
     }
 }

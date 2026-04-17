@@ -38,26 +38,64 @@ public class Atom : MonoBehaviour
     }
 
     // 実際に結合する処理
-        private void ExecuteConnection(BondPoint myPoint, BondPoint targetPoint)
+    // 引数を元に戻し、OnReleasedから呼び出せるようにする
+    public void ExecuteConnection(BondPoint myBond, BondPoint targetBond)
+    {
+        // 引数から消したtargetAtomは、ここでBondPointの親から取得する
+        Atom targetAtom = targetBond.GetComponentInParent<Atom>();
+
+        // 1. スナップ処理
+        SnapToTarget(myBond, targetBond);
+
+        // 2. 物理的な結合
+        Rigidbody myRb = GetComponent<Rigidbody>();
+        Rigidbody targetRb = targetAtom.GetComponent<Rigidbody>();
+
+        myRb.linearVelocity = Vector3.zero;
+        myRb.angularVelocity = Vector3.zero;
+
+        if (gameObject.GetComponent<FixedJoint>() == null)
         {
-            // 1. 向きの調整（お互いの腕が「向かい合わせ」になるように親の原子を回転させる）
-            // ※UnityのCylinderはY軸(up)方向に伸びるため、upベクトルを基準に計算します
-            Quaternion targetRotation = Quaternion.FromToRotation(myPoint.transform.up, -targetPoint.transform.up);
-            transform.rotation = targetRotation * transform.rotation;
-
-            // 2. 位置の調整（回転させた後、自分の腕の先端と相手の腕の先端の「ズレ」を計算して移動する）
-            Vector3 offset = targetPoint.transform.position - myPoint.transform.position;
-            transform.position += offset; // ズレの分だけ親（Atom全体）を移動させる
-
-            // 3. お互いの腕を「結合済み」状態にする
-            myPoint.Connect(targetPoint);
-            targetPoint.Connect(myPoint);
-
-            // 4. 物理的に固定する（FixedJointの生成）
             FixedJoint joint = gameObject.AddComponent<FixedJoint>();
-            joint.connectedBody = targetPoint.ParentAtom.GetComponent<Rigidbody>();
-            joint.breakForce = 500f; 
-
-            Debug.Log($"【ダンベル結合成功！】{ElementType} と {targetPoint.ParentAtom.ElementType} が球棒モデルでくっつきました！");
+            joint.connectedBody = targetRb;
+            joint.breakForce = Mathf.Infinity;
+            joint.breakTorque = Mathf.Infinity;
         }
+
+        // 3. 状態の更新（お互いを記憶）
+        myBond.ConnectTo(targetBond);
+        targetBond.ConnectTo(myBond);
+
+        // 4. 【復活】Molecule（分子データ）の統合処理
+        Molecule myMolecule = GetComponentInParent<Molecule>();
+        Molecule targetMolecule = targetAtom.GetComponentInParent<Molecule>();
+        
+        // お互いがMoleculeを持っていて、かつまだ同じ分子ではない場合
+        if (myMolecule != null && targetMolecule != null && myMolecule != targetMolecule)
+        {
+            myMolecule.MergeWith(targetMolecule);
+            Debug.Log("分子が統合されました！");
+        }
+    }
+
+    private void SnapToTarget(BondPoint myBond, BondPoint targetBond)
+    {
+        // ① 回転の計算：お互いのY軸が逆を向くようにする
+        Quaternion rotationDiff = Quaternion.FromToRotation(myBond.transform.up, -targetBond.transform.up);
+        transform.rotation = rotationDiff * transform.rotation;
+
+        // ② 位置の計算：Transformの位置ではなく、Colliderの「ズラした中心位置」を取得する
+        SphereCollider myCollider = myBond.GetComponent<SphereCollider>();
+        SphereCollider targetCollider = targetBond.GetComponent<SphereCollider>();
+
+        // TransformPointを使って、ローカルのズレ(Y=1.0など)をワールド座標に変換（ここが結合手の真の先端）
+        Vector3 myTipWorldPos = myBond.transform.TransformPoint(myCollider.center);
+        Vector3 targetTipWorldPos = targetBond.transform.TransformPoint(targetCollider.center);
+
+        // 自分の中心から先端までのオフセット
+        Vector3 offset = transform.position - myTipWorldPos;
+        
+        // 相手の先端位置 ＋ オフセットの位置に移動
+        transform.position = targetTipWorldPos + offset;
+    }
 }

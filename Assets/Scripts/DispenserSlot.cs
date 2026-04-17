@@ -22,8 +22,7 @@ public class DispenserSlot : MonoBehaviour
         Atom pulledAtom = other.GetComponentInParent<Atom>();
 
         // もし出ていったのが原子で、かつ「今まさに手で掴まれている状態」なら
-        // if (pulledAtom != null && pulledAtom.IsGrabbed)
-        if (pulledAtom != null)
+        if (pulledAtom != null && pulledAtom.IsGrabbed)
         {
             Debug.Log("【ディスペンサー】原子が引き抜かれました！新しい原子を補充します。");
             SpawnNewAtom();
