@@ -47,7 +47,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26b224f691992344fab8d9b0556a78b0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  IsConnected: 0
   ParentAtom: {fileID: 0}
   HoverTarget: {fileID: 0}
 --- !u!135 &4910499085355634505
@@ -334,7 +333,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26b224f691992344fab8d9b0556a78b0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  IsConnected: 0
   ParentAtom: {fileID: 0}
   HoverTarget: {fileID: 0}
 --- !u!135 &3144685489869313203
@@ -568,7 +566,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26b224f691992344fab8d9b0556a78b0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  IsConnected: 0
   ParentAtom: {fileID: 0}
   HoverTarget: {fileID: 0}
 --- !u!135 &1825141660516666532
@@ -735,8 +732,8 @@ Rigidbody:
   m_GameObject: {fileID: 2511216778255804007}
   serializedVersion: 4
   m_Mass: 1
-  m_Drag: 0
-  m_AngularDrag: 0.05
+  m_Drag: 10
+  m_AngularDrag: 10
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -774,7 +771,7 @@ MonoBehaviour:
   _maxGrabPoints: -1
   _rigidbody: {fileID: 1285200419134527343}
   _kinematicWhileSelected: 1
-  _throwWhenUnselected: 1
+  _throwWhenUnselected: 0
   _forceKinematicDisabled: 0
 --- !u!114 &7795661379485825917
 MonoBehaviour:
@@ -1215,7 +1212,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26b224f691992344fab8d9b0556a78b0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  IsConnected: 0
   ParentAtom: {fileID: 0}
   HoverTarget: {fileID: 0}
 --- !u!135 &3130712843567669991

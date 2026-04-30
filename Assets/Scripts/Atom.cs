@@ -35,13 +35,19 @@ public class Atom : MonoBehaviour
                 break; // 1回手を離して繋がるのは1箇所だけ
             }
         }
+
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero; // 移動の勢いを殺す
+            rb.angularVelocity = Vector3.zero; // 回転の勢いを殺す
+        }
     }
 
     // 実際に結合する処理
     // 引数を元に戻し、OnReleasedから呼び出せるようにする
     public void ExecuteConnection(BondPoint myBond, BondPoint targetBond)
     {
-        // 引数から消したtargetAtomは、ここでBondPointの親から取得する
         Atom targetAtom = targetBond.GetComponentInParent<Atom>();
 
         // 1. スナップ処理
@@ -51,26 +57,43 @@ public class Atom : MonoBehaviour
         Rigidbody myRb = GetComponent<Rigidbody>();
         Rigidbody targetRb = targetAtom.GetComponent<Rigidbody>();
 
-        myRb.linearVelocity = Vector3.zero;
-        myRb.angularVelocity = Vector3.zero;
+        // 【修正箇所 1】強制的に物理演算をONにする（両方とも false にする！）
+        myRb.isKinematic = false;
+        myRb.useGravity = false;
+        targetRb.isKinematic = false; // ← これがないと相手が空中に固定されたままになります
+        targetRb.useGravity = false;
 
+        // 【修正箇所 2】自分の原子から相手へ Joint を張る
         if (gameObject.GetComponent<FixedJoint>() == null)
         {
-            FixedJoint joint = gameObject.AddComponent<FixedJoint>();
-            joint.connectedBody = targetRb;
-            joint.breakForce = Mathf.Infinity;
-            joint.breakTorque = Mathf.Infinity;
+            FixedJoint joint1 = gameObject.AddComponent<FixedJoint>();
+            joint1.connectedBody = targetRb;
+            joint1.breakForce = Mathf.Infinity;
+            joint1.breakTorque = Mathf.Infinity;
         }
+
+        // 【修正箇所 3】相手の原子から自分へ Joint を張る（両方への付与）
+        if (targetAtom.gameObject.GetComponent<FixedJoint>() == null)
+        {
+            FixedJoint joint2 = targetAtom.gameObject.AddComponent<FixedJoint>();
+            joint2.connectedBody = myRb;
+            joint2.breakForce = Mathf.Infinity;
+            joint2.breakTorque = Mathf.Infinity;
+        }
+
+        // お互いのコライダーの衝突を無視する（食い込みによる反発を防ぐ）
+        Collider myCol = GetComponent<Collider>();
+        Collider targetCol = targetAtom.GetComponent<Collider>();
+        if (myCol && targetCol) Physics.IgnoreCollision(myCol, targetCol);
 
         // 3. 状態の更新（お互いを記憶）
         myBond.ConnectTo(targetBond);
         targetBond.ConnectTo(myBond);
 
-        // 4. 【復活】Molecule（分子データ）の統合処理
+        // 4. Molecule（分子データ）の統合処理
         Molecule myMolecule = GetComponentInParent<Molecule>();
         Molecule targetMolecule = targetAtom.GetComponentInParent<Molecule>();
-        
-        // お互いがMoleculeを持っていて、かつまだ同じ分子ではない場合
+
         if (myMolecule != null && targetMolecule != null && myMolecule != targetMolecule)
         {
             myMolecule.MergeWith(targetMolecule);
