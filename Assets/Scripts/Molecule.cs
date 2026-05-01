@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 public class Molecule : MonoBehaviour
 {
@@ -16,5 +17,14 @@ public class Molecule : MonoBehaviour
     public void Split(Atom splitNodeA, Atom splitNodeB)
     {
         Debug.Log("分子が分割されました！");
+    }
+
+    // 形が変わったときに発火するイベント（外部のManagerがこれを監視する）
+    public UnityEvent<Molecule> OnStructureChangedEvent;
+
+    public void OnStructureChanged()
+    {
+        // 判定は自分では行わず、「変わったこと」だけを外部に知らせる
+        OnStructureChangedEvent?.Invoke(this);
     }
 }

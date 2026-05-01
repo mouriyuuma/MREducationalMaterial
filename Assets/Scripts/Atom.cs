@@ -36,6 +36,7 @@ public class Atom : MonoBehaviour
             }
         }
 
+        // 飛んでいかないためのブレーキ
         Rigidbody rb = GetComponent<Rigidbody>();
         if (rb != null)
         {
@@ -59,7 +60,7 @@ public class Atom : MonoBehaviour
 
         // 【修正箇所 1】強制的に物理演算をONにする（両方とも false にする！）
         myRb.isKinematic = false;
-        myRb.useGravity = false;
+        myRb.useGravity = false; 
         targetRb.isKinematic = false; // ← これがないと相手が空中に固定されたままになります
         targetRb.useGravity = false;
 
@@ -93,12 +94,15 @@ public class Atom : MonoBehaviour
         // 4. Molecule（分子データ）の統合処理
         Molecule myMolecule = GetComponentInParent<Molecule>();
         Molecule targetMolecule = targetAtom.GetComponentInParent<Molecule>();
-
+        
         if (myMolecule != null && targetMolecule != null && myMolecule != targetMolecule)
         {
             myMolecule.MergeWith(targetMolecule);
             Debug.Log("分子が統合されました！");
         }
+
+        // 5. 構造変更通知（ここを追加！)
+        if (myMolecule != null) myMolecule.OnStructureChanged();
     }
 
     private void SnapToTarget(BondPoint myBond, BondPoint targetBond)

@@ -262,6 +262,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26b224f691992344fab8d9b0556a78b0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  IsConnected: 0
   ParentAtom: {fileID: 0}
   HoverTarget: {fileID: 0}
 --- !u!1 &4492034603693316932
@@ -553,7 +554,7 @@ MonoBehaviour:
   _maxGrabPoints: -1
   _rigidbody: {fileID: 4351042902862555184}
   _kinematicWhileSelected: 1
-  _throwWhenUnselected: 0
+  _throwWhenUnselected: 1
   _forceKinematicDisabled: 0
 --- !u!114 &7009779825319973740
 MonoBehaviour:
@@ -662,6 +663,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26b224f691992344fab8d9b0556a78b0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  IsConnected: 0
   ParentAtom: {fileID: 0}
   HoverTarget: {fileID: 0}
 --- !u!1 &8993496062298969104
