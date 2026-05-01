@@ -1,5 +1,6 @@
 using UnityEngine;
 
+// 結合の処理を行うクラス
 public class Atom : MonoBehaviour
 {
     [Header("Atom Data")]
