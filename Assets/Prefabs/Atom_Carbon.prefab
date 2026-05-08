@@ -47,8 +47,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26b224f691992344fab8d9b0556a78b0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ParentAtom: {fileID: 0}
-  HoverTarget: {fileID: 0}
 --- !u!135 &4910499085355634505
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -333,8 +331,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26b224f691992344fab8d9b0556a78b0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ParentAtom: {fileID: 0}
-  HoverTarget: {fileID: 0}
 --- !u!135 &3144685489869313203
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -566,8 +562,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26b224f691992344fab8d9b0556a78b0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ParentAtom: {fileID: 0}
-  HoverTarget: {fileID: 0}
 --- !u!135 &1825141660516666532
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -606,6 +600,7 @@ GameObject:
   - component: {fileID: 2588772806545353272}
   - component: {fileID: 7795661379485825917}
   - component: {fileID: 1237216058121930817}
+  - component: {fileID: 5218800370613257674}
   m_Layer: 0
   m_Name: Atom_Carbon
   m_TagString: Untagged
@@ -720,9 +715,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ElementType: C
-  ParentMolecule: {fileID: 0}
-  IsGrabbed: 0
-  BondPoints: []
 --- !u!54 &1285200419134527343
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -859,8 +851,8 @@ MonoBehaviour:
   _whenSelect:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 5531580230631592505}
-        m_TargetAssemblyTypeName: Atom, Assembly-CSharp
+      - m_Target: {fileID: 5218800370613257674}
+        m_TargetAssemblyTypeName: AtomInteraction, Assembly-CSharp
         m_MethodName: OnGrabbed
         m_Mode: 1
         m_Arguments:
@@ -874,8 +866,8 @@ MonoBehaviour:
   _whenUnselect:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 5531580230631592505}
-        m_TargetAssemblyTypeName: Atom, Assembly-CSharp
+      - m_Target: {fileID: 5218800370613257674}
+        m_TargetAssemblyTypeName: AtomInteraction, Assembly-CSharp
         m_MethodName: OnReleased
         m_Mode: 1
         m_Arguments:
@@ -892,6 +884,18 @@ MonoBehaviour:
   _whenCancel:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &5218800370613257674
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2511216778255804007}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 982c57d87c256464699937919b5e317e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &5029939825467168504
 GameObject:
   m_ObjectHideFlags: 0
@@ -1212,8 +1216,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26b224f691992344fab8d9b0556a78b0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ParentAtom: {fileID: 0}
-  HoverTarget: {fileID: 0}
 --- !u!135 &3130712843567669991
 SphereCollider:
   m_ObjectHideFlags: 0
