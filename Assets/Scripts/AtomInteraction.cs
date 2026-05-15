@@ -36,15 +36,18 @@ public class AtomInteraction : MonoBehaviour
 
     private void TryConnect()
     {
+        // 自分が持っているすべての結合手をチェック
         foreach (BondPoint myPoint in _atom.BondPoints)
         {
-            // 相手候補がいて、かつお互いまだ繋がっていない場合
-            // ※実際はTriggerEnter等でHoverTargetを取得するロジックがここに入ります（既存のものを流用）
-            // if (myPoint.HoverTarget != null && !myPoint.IsConnected && !myPoint.HoverTarget.IsConnected)
-            // {
-            //     ExecuteConnection(myPoint, myPoint.HoverTarget);
-            //     break;
-            // }
+            // 近くに相手（HoverTarget）がいて、かつお互いが未結合の場合
+            if (myPoint.HoverTarget != null && !myPoint.IsConnected && !myPoint.HoverTarget.IsConnected)
+            {
+                // 結合処理を実行
+                ExecuteConnection(myPoint, myPoint.HoverTarget);
+                
+                // 1回の「離す」動作で結合するのは1箇所までとする（不自然な多重結合防止）
+                break; 
+            }
         }
     }
 

@@ -49,7 +49,7 @@ SphereCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 1
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Radius: 0.2
   m_Center: {x: 0, y: 1, z: 0}
@@ -212,7 +212,7 @@ SphereCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 1
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Radius: 0.2
   m_Center: {x: 0, y: 1, z: 0}
@@ -226,6 +226,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1338697015968546482}
   - component: {fileID: 7759057238978069983}
+  - component: {fileID: 7554366140809874671}
   m_Layer: 0
   m_Name: BondPoint_2
   m_TagString: Untagged
@@ -262,9 +263,27 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26b224f691992344fab8d9b0556a78b0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  IsConnected: 0
-  ParentAtom: {fileID: 0}
-  HoverTarget: {fileID: 0}
+--- !u!135 &7554366140809874671
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4262188144705485965}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.2
+  m_Center: {x: 0, y: 1, z: 0}
 --- !u!1 &4492034603693316932
 GameObject:
   m_ObjectHideFlags: 0
@@ -390,7 +409,8 @@ GameObject:
   - component: {fileID: 6129171155351569674}
   - component: {fileID: 4351042902862555184}
   - component: {fileID: 1134148762203750370}
-  - component: {fileID: 7009779825319973740}
+  - component: {fileID: -4427286568816088960}
+  - component: {fileID: 5255428857542930068}
   m_Layer: 0
   m_Name: Atom_Oxygen
   m_TagString: Untagged
@@ -484,7 +504,7 @@ SphereCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
@@ -503,9 +523,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ElementType: O
-  ParentMolecule: {fileID: 0}
-  IsGrabbed: 0
-  BondPoints: []
 --- !u!54 &4351042902862555184
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -554,9 +571,9 @@ MonoBehaviour:
   _maxGrabPoints: -1
   _rigidbody: {fileID: 4351042902862555184}
   _kinematicWhileSelected: 1
-  _throwWhenUnselected: 1
+  _throwWhenUnselected: 0
   _forceKinematicDisabled: 0
---- !u!114 &7009779825319973740
+--- !u!114 &-4427286568816088960
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -565,10 +582,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 5099895511649414806}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1464721f2283eb14e94a33e812b47be4, type: 3}
+  m_Script: {fileID: 11500000, guid: e2f8f6e9e6f3e114b9bf9a57c2160615, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _interactableView: {fileID: 7965155299313970606}
+  _pointable: {fileID: 1134148762203750370}
+  _whenRelease:
+    m_PersistentCalls:
+      m_Calls: []
   _whenHover:
     m_PersistentCalls:
       m_Calls: []
@@ -578,8 +598,8 @@ MonoBehaviour:
   _whenSelect:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 6129171155351569674}
-        m_TargetAssemblyTypeName: Atom, Assembly-CSharp
+      - m_Target: {fileID: 5255428857542930068}
+        m_TargetAssemblyTypeName: AtomInteraction, Assembly-CSharp
         m_MethodName: OnGrabbed
         m_Mode: 1
         m_Arguments:
@@ -593,8 +613,8 @@ MonoBehaviour:
   _whenUnselect:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 6129171155351569674}
-        m_TargetAssemblyTypeName: Atom, Assembly-CSharp
+      - m_Target: {fileID: 5255428857542930068}
+        m_TargetAssemblyTypeName: AtomInteraction, Assembly-CSharp
         m_MethodName: OnReleased
         m_Mode: 1
         m_Arguments:
@@ -605,18 +625,24 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-  _whenInteractorViewAdded:
+  _whenMove:
     m_PersistentCalls:
       m_Calls: []
-  _whenInteractorViewRemoved:
+  _whenCancel:
     m_PersistentCalls:
       m_Calls: []
-  _whenSelectingInteractorViewAdded:
-    m_PersistentCalls:
-      m_Calls: []
-  _whenSelectingInteractorViewRemoved:
-    m_PersistentCalls:
-      m_Calls: []
+--- !u!114 &5255428857542930068
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5099895511649414806}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 982c57d87c256464699937919b5e317e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &7061518685748335576
 GameObject:
   m_ObjectHideFlags: 0
@@ -627,6 +653,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7470456087220057597}
   - component: {fileID: 3561024148088281022}
+  - component: {fileID: 8586375188129973241}
   m_Layer: 0
   m_Name: BondPoint_1
   m_TagString: Untagged
@@ -663,9 +690,27 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26b224f691992344fab8d9b0556a78b0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  IsConnected: 0
-  ParentAtom: {fileID: 0}
-  HoverTarget: {fileID: 0}
+--- !u!135 &8586375188129973241
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7061518685748335576}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.2
+  m_Center: {x: 0, y: 1, z: 0}
 --- !u!1 &8993496062298969104
 GameObject:
   m_ObjectHideFlags: 0
