@@ -8,10 +8,22 @@ public class PuzzleManager : MonoBehaviour
     [Tooltip("現在のお題データ（ScriptableObject）")]
     public MoleculeData CurrentTargetData;
 
+    [Header("Feedback Effects")]
+    [Tooltip("クリア時に出すパーティクルなどのプレハブ")]
+    public GameObject ClearEffectPrefab;
+    [Tooltip("クリア時に鳴らす効果音")]
+    public AudioClip ClearSound;
+
+    private AudioSource _audioSource;
+
     private void Awake()
     {
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
+
+        // 音を鳴らすためのコンポーネントを自動追加
+        _audioSource = gameObject.AddComponent<AudioSource>();
+        _audioSource.playOnAwake = false;
     }
 
     // MoleculeManagerから「ひとまとまりの分子」が送られてくる
@@ -29,7 +41,8 @@ public class PuzzleManager : MonoBehaviour
         Debug.Log($"【クリア】お題「{CurrentTargetData.MoleculeName}」が完成しました！");
         
         // ※ここでベンゼン環へのモデル置換や、パーティクル演出を実行します
-        OnPuzzleCleared();
+        // クリア処理に完成した分子のデータを渡す
+        OnPuzzleCleared(moleculeAtoms);
     }
 
     // 原子の数をチェックするメソッド
@@ -69,8 +82,28 @@ public class PuzzleManager : MonoBehaviour
         return true; 
     }
 
-    private void OnPuzzleCleared()
+    private void OnPuzzleCleared(List<Atom> moleculeAtoms)
     {
-        // クリア演出処理（音を鳴らす、次のお題に進むなど）
+        // 1. 分子の「中心位置」を計算する
+        Vector3 centerPosition = Vector3.zero;
+        foreach (Atom atom in moleculeAtoms)
+        {
+            centerPosition += atom.transform.position;
+        }
+        centerPosition /= moleculeAtoms.Count;
+
+        // 2. エフェクトを生成する
+        if (ClearEffectPrefab != null)
+        {
+            Instantiate(ClearEffectPrefab, centerPosition, Quaternion.identity);
+        }
+
+        // 3. 効果音を鳴らす
+        if (ClearSound != null)
+        {
+            _audioSource.PlayOneShot(ClearSound);
+        }
+
+        // ※ここで次のお題に進む処理などを後々追加します
     }
 }
