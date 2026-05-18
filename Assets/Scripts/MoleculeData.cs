@@ -1,39 +1,42 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// 右クリックメニューから簡単にこのデータを作れるようにする属性
 [CreateAssetMenu(fileName = "NewMolecule", menuName = "Chemistry Puzzle/Molecule Data")]
 public class MoleculeData : ScriptableObject
 {
     [Header("Basic Info")]
-    public string MoleculeName; // 分子の名前（例：水）
-    public string Formula;      // 化学式（例：H2O）
+    public string MoleculeName; // 分子の名前（例：シス-2-ブテン）
+    public string Formula;      // 化学式（例：C4H8）
 
-    [Header("Required Atoms (ノード)")]
-    // どの原子が、何個必要か
-    public List<ElementCount> RequiredAtoms;
+    [Header("Required Atoms (ノード定義)")]
+    [Tooltip("この分子を構成する原子ノードのリスト。インデックスがそのままAtomIDになります")]
+    public List<AtomNodeRequirement> RequiredAtoms;
 
-    [Header("Required Bonds (エッジ)")]
-    // どの原子とどの原子が繋がっている必要があるか（グラフの辺）
-    public List<BondRequirement> RequiredBonds;
-}
-
-// Inspectorで設定できるようにするシリアライズ属性
-[System.Serializable]
-public class ElementCount
-{
-    public string ElementType; // "C", "H", "O" など
-    public int Count;          // 必要な数
+    [Header("Required Bonds (エッジ・結合手定義)")]
+    [Tooltip("どの原子の、何番目の結合手（腕）同士が繋がっているべきかのリスト")]
+    public List<BondEdgeRequirement> RequiredBonds;
 }
 
 [System.Serializable]
-public class BondRequirement
+public class AtomNodeRequirement
 {
-    [Tooltip("結合する原子その1 (例: O)")]
-    public string ElementA;
-    [Tooltip("結合する原子その2 (例: H)")]
-    public string ElementB;
-    
-    [Tooltip("何重結合か (今は単結合のみなので1で固定)")]
-    public int BondOrder = 1; 
+    public int AtomId;          // 固有ID（0, 1, 2...）
+    public string ElementType;  // "C", "H", "O" など
+}
+
+[System.Serializable]
+public class BondEdgeRequirement
+{
+    [Header("Atom A (接続元)")]
+    public int AtomIdA;        // 原子AのID
+    public int BondIndexA;     // 原子Aの何番目の結合手（BondPoint）か
+
+    [Header("Atom B (接続先)")]
+    public int AtomIdB;        // 原子BのID
+    public int BondIndexB;     // 原子Bの何番目の結合手（BondPoint）か
+
+    [Header("Bond Properties")]
+    [Tooltip("何重結合か (1=単結合, 2=二重結合, 3=三重結合)")]
+    [Range(1, 3)] // Inspectorでスライダー表示にしておくと便利です
+    public int BondOrder = 1;
 }

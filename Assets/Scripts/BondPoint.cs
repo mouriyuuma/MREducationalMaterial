@@ -4,6 +4,9 @@ using UnityEngine;
 public class BondPoint : MonoBehaviour
 {
     public bool IsConnected { get; private set; }
+    // 現在の結合の強さ（1=単結合, 2=二重結合, 3=三重結合）
+    public int CurrentBondOrder { get; set; } = 1;
+
     public BondPoint ConnectedTarget { get; private set; }
 
     // 現在重なっている（結合候補の）相手
