@@ -48,7 +48,13 @@ public class PuzzleManager : MonoBehaviour
     // 原子の数をチェックするメソッド
     private bool CheckAtomCounts(List<Atom> moleculeAtoms)
     {
-        // 今作られた分子の原子を数え上げる
+        // 1. 全体の原子数が一致するか（そもそも数が違えば不合格）
+        if (moleculeAtoms.Count != CurrentTargetData.RequiredAtoms.Count)
+        {
+            return false;
+        }
+
+        // 2. プレイヤーが作った分子の各元素の数を数える
         Dictionary<string, int> currentCounts = new Dictionary<string, int>();
         foreach (Atom atom in moleculeAtoms)
         {
@@ -58,19 +64,28 @@ public class PuzzleManager : MonoBehaviour
                 currentCounts[atom.ElementType] = 1;
         }
 
-        // お題（ScriptableObject）の要求数と比較
-        foreach (var req in CurrentTargetData.RequiredAtoms)
+        // 3. お題データ（RequiredAtomsのリスト）から、各元素が何個必要かを集計する
+        Dictionary<string, int> targetCounts = new Dictionary<string, int>();
+        foreach (var nodeReq in CurrentTargetData.RequiredAtoms)
         {
-            if (!currentCounts.ContainsKey(req.ElementType) || currentCounts[req.ElementType] != req.Count)
+            if (targetCounts.ContainsKey(nodeReq.ElementType))
+                targetCounts[nodeReq.ElementType]++;
+            else
+                targetCounts[nodeReq.ElementType] = 1;
+        }
+
+        // 4. 種類と数が完全に一致するか比較する
+        if (currentCounts.Count != targetCounts.Count) return false;
+
+        foreach (var pair in targetCounts)
+        {
+            if (!currentCounts.ContainsKey(pair.Key) || currentCounts[pair.Key] != pair.Value)
             {
-                return false; // 足りない、または多すぎる場合は不合格
+                return false; 
             }
         }
 
-        // 余計な種類の原子が混ざっていないかも確認
-        if (currentCounts.Keys.Count != CurrentTargetData.RequiredAtoms.Count) return false;
-
-        return true; // 種類と数が完全に一致！
+        return true;
     }
 
     // トポロジー（繋がり方）をチェックするメソッド
@@ -188,6 +203,12 @@ public class PuzzleManager : MonoBehaviour
             _audioSource.PlayOneShot(ClearSound);
         }
 
-        // ※ここで次のお題に進む処理などを後々追加します
+        // ★追加: UIボードにクリア演出を表示させる
+        if (TargetBoardUI.Instance != null)
+        {
+            TargetBoardUI.Instance.ShowClearVisual();
+        }
+
+        // (以前の計画通り、ここにベンゼン環のモデル置換やパーティクル生成を後ほど実装します)
     }
 }
