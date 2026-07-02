@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 45560c66860167941b97b65cb3483757, type: 3}
+  m_Name: Acetaldehyde
+  m_EditorClassIdentifier: 
+  MoleculeName: "\u30A2\u30BB\u30C8\u30A2\u30EB\u30C7\u30D2\u30C9"
+  Formula: CH3CHO
+  StructuralFormula: {fileID: 0}
+  FunctionalGroup: "\u30A2\u30EB\u30C7\u30D2\u30C9\u57FA"
+  FunctionalGroupFormula: -CHO
+  Description: "\u30A8\u30BF\u30CE\u30FC\u30EB\u304C\u9178\u5316\u3055\u308C\u308B\u3068\u751F\u6210\u3059\u308B\u30A2\u30EB\u30C7\u30D2\u30C9\u3002\n\u304A\u9152\u3092\u98F2\u3093\u3060\u5F8C\u306E\u982D\u75DB\u30FB\u4E8C\u65E5\u9154\u3044\u306E\u539F\u56E0\u7269\u8CEA\u3002\n\u3055\u3089\u306B\u9178\u5316\u3055\u308C\u308B\u3068\u9162\u9178\uFF08\u304A\u9162\uFF09\u306B\u306A\u308B\u3002"
+  Categories: 16
+  EncyclopediaModelPrefab: {fileID: 0}
+  RequiredAtoms: []
+  RequiredBonds: []

@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 45560c66860167941b97b65cb3483757, type: 3}
+  m_Name: Ethanol
+  m_EditorClassIdentifier: 
+  MoleculeName: "\u30A8\u30BF\u30CE\u30FC\u30EB"
+  Formula: C2H5OH
+  StructuralFormula: {fileID: 0}
+  FunctionalGroup: "\u30D2\u30C9\u30ED\u30AD\u30B7\u57FA"
+  FunctionalGroupFormula: -OH
+  Description: "\u70AD\u7D202\u500B\u3092\u6301\u3064\u7B2C\u4E00\u7D1A\u30A2\u30EB\u30B3\u30FC\u30EB\u3002\u30D2\u30C9\u30ED\u30AD\u30B7\u57FA(-OH)\u3092\u6301\u3064\u3002\n\u304A\u9152\u306E\u4E3B\u6210\u5206\u3067\u3042\u308A\u6D88\u6BD2\u7528\u30A2\u30EB\u30B3\u30FC\u30EB\u3068\u3057\u3066\u3082\u4F7F\u7528\u3055\u308C\u308B\u3002\n\u9178\u5316\u3055\u308C\u308B\u3068\u30A2\u30BB\u30C8\u30A2\u30EB\u30C7\u30D2\u30C9\u2192\u9162\u9178\u306E\u9806\u306B\u5909\u5316\u3059\u308B\u3002"
+  Categories: 4
+  EncyclopediaModelPrefab: {fileID: 0}
+  RequiredAtoms: []
+  RequiredBonds: []
