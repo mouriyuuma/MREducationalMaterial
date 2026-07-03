@@ -40,6 +40,12 @@ public class MoleculeData : ScriptableObject
     [Tooltip("図鑑に表示する2Dの構造式画像")]
     public Sprite StructuralFormula;
 
+    [Tooltip("官能基の名前(例：ヒドロキシ基、カルボキシ基)")]
+    public string FunctionalGroup;
+
+    [Tooltip("官能基の化学式（例：-OH、-COOH）")]
+    public string FunctionalGroupFormula;
+
     [TextArea(4, 10)]
     [Tooltip("分子の特徴や高校化学での重要ポイントなどの説明文")]
     public string Description;
