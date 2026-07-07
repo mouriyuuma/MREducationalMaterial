@@ -1,21 +1,32 @@
-using UnityEditor;
 using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
 
 public class EncyclopediaManager : MonoBehaviour
 {
-    public MoleculeDatabase database;
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    [Header("Database")]
+    [SerializeField] private MoleculeDatabase database;
+
+    [Header("UI")]
+    [SerializeField] private Transform contentParent;
+    [SerializeField] private GameObject buttonPrefab;
+
+    private void Start()
+    {
+        CreateButtons();
+    }
+
+    private void CreateButtons()
     {
         foreach (MoleculeData molecule in database.molecules)
         {
-            Debug.Log(molecule.MoleculeName);
-        }
-    }
+            GameObject buttonObject =
+                Instantiate(buttonPrefab, contentParent);
 
-    // Update is called once per frame
-    void Update()
-    {
-        
+            TMP_Text text =
+                buttonObject.GetComponentInChildren<TMP_Text>();
+
+            text.text = molecule.MoleculeName;
+        }
     }
 }
