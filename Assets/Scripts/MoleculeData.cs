@@ -80,6 +80,6 @@ public class BondEdgeRequirement
 
     [Header("Bond Properties")]
     [Tooltip("何重結合か (1=単結合, 2=二重結合, 3=三重結合)")]
-    [Range(1, 3)] // Inspectorでスライダー表示にしておくと便利です
+    [Range(1, 3)] // Inspectorでスライダー表示にしておくと便利
     public int BondOrder = 1;
 }

@@ -203,7 +203,7 @@ public class PuzzleManager : MonoBehaviour
             _audioSource.PlayOneShot(ClearSound);
         }
 
-        // ★追加: UIボードにクリア演出を表示させる
+        // UIボードにクリア演出を表示させる
         if (TargetBoardUI.Instance != null)
         {
             TargetBoardUI.Instance.ShowClearVisual();

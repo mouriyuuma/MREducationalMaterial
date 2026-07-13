@@ -17,7 +17,7 @@ public class AtomInteraction : MonoBehaviour
         _atom = GetComponent<Atom>();
         _rb = GetComponent<Rigidbody>();
 
-        // ★追加: プレビュー用のLineRendererをプログラムから動的に追加して設定する
+        // プレビュー用のLineRendererをプログラムから動的に追加して設定する
         _previewLine = gameObject.AddComponent<LineRenderer>();
         _previewLine.startWidth = 0.015f; // 線の太さ
         _previewLine.endWidth = 0.015f;
@@ -175,19 +175,19 @@ public class AtomInteraction : MonoBehaviour
 
     private void Update()
     {
-        // ★追加: 自分が掴まれている間だけ、繋がっている原子との距離を測る
+        // 自分が掴まれている間だけ、繋がっている原子との距離を測る
         if (IsGrabbed)
         {
             CheckBondDistances();
-            UpdateConnectionPreview(); // ★追加: 掴んでいる間はプレビュー線を更新
+            UpdateConnectionPreview(); // 掴んでいる間はプレビュー線を更新
         }
         else
         {
-            _previewLine.enabled = false; // ★追加: 離したら線を消す
+            _previewLine.enabled = false; // 離したら線を消す
         }
     }
 
-    // ★追加: 結合プレビューの線を引くメソッド
+    // 結合プレビューの線を引くメソッド
     private void UpdateConnectionPreview()
     {
         BondPoint bestMyBond = null;
@@ -223,7 +223,7 @@ public class AtomInteraction : MonoBehaviour
         }
     }
 
-    // ★追加: 押し込み・引っ張りを検知するロジック
+    // 押し込み・引っ張りを検知するロジック
     private void CheckBondDistances()
     {
         foreach (BondPoint myBond in _atom.BondPoints)
@@ -233,7 +233,7 @@ public class AtomInteraction : MonoBehaviour
                 Atom targetAtom = myBond.ConnectedTarget.ParentAtom;
                 AtomInteraction targetInteraction = targetAtom.GetComponent<AtomInteraction>();
 
-                // ★大修正: 「自分も相手も掴まれている（両手で操作している）時」だけ距離判定を行う！
+                // 「自分も相手も掴まれている（両手で操作している）時」だけ距離判定を行う！
                 if (this.IsGrabbed && targetInteraction != null && targetInteraction.IsGrabbed)
                 {
                     // 両方の原子から判定が走るのを防ぐためのIDチェック（片方だけが処理する）
@@ -296,7 +296,7 @@ public class AtomInteraction : MonoBehaviour
         }
     }
 
-    // ★追加: 結合を完全に引きちぎるメソッド
+    // 結合を完全に引きちぎるメソッド
     private void BreakBond(BondPoint myBond, BondPoint targetBond)
     {
         Atom targetAtom = targetBond.ParentAtom;
@@ -329,7 +329,7 @@ public class AtomInteraction : MonoBehaviour
         }
     }
 
-    // ★追加: 結合の強さを変更し、再固定するメソッド
+    // 結合の強さを変更し、再固定するメソッド
     private void ChangeBondOrder(BondPoint myBond, BondPoint targetBond, int newOrder)
     {
         myBond.SetBondOrder(newOrder);
