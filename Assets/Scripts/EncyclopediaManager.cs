@@ -1,17 +1,21 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using Unity.VisualScripting;
 
 public class EncyclopediaManager : MonoBehaviour
 {
     [Header("Database")]
-    [SerializeField] private MoleculeDatabase database; // 参照するデータベース
+    [SerializeField] private MoleculeDatabase Database; // 参照するデータベース
 
     [Header("UI")]
-    [SerializeField] private Transform contentParent; // 生成したボタン置き場
-    [SerializeField] private GameObject buttonPrefab; // ボタンの種類(Prefab)
+    [SerializeField] private Transform ContentParent; // 生成したボタン置き場
+    [SerializeField] private GameObject ButtonPrefab; // ボタンの種類(Prefab)
 
-    [SerializeField] private TMP_FontAsset japaneseFont;
+    [SerializeField] private TMP_FontAsset JapaneseFont;
+
+    [Header("display")]
+    [SerializeField] private MoleculeDetailPanel DetailPanel;
 
     private void Start()
     {
@@ -20,16 +24,23 @@ public class EncyclopediaManager : MonoBehaviour
 
     private void CreateButtons()
     {
-        foreach (MoleculeData molecule in database.molecules) // databaseにmoleculeが存在する間
+        foreach (MoleculeData Molecule in Database.molecules) // databaseにmoleculeが存在する間
         {
-            GameObject buttonObject =
-                Instantiate(buttonPrefab, contentParent); // ボタンの種類(Prefab)のコピー
+            GameObject ButtonObject =
+                Instantiate(ButtonPrefab, ContentParent); // ボタンの種類(Prefab)のコピー
 
             TMP_Text text =
-                buttonObject.GetComponentInChildren<TMP_Text>(); //ボタンが持つはずの文字情報の参照
+                ButtonObject.GetComponentInChildren<TMP_Text>(); //ボタンが持つはずの文字情報の参照
 
-            text.font = japaneseFont;
-            text.text = molecule.MoleculeName; // 分子の名前を参照してテキストを生成
+            text.font = JapaneseFont;
+            text.text = Molecule.MoleculeName; // 分子の名前を参照してテキストを生成
+
+            Button Button = ButtonObject.GetComponent<Button>();
+
+            Button.onClick.AddListener(() =>
+            {
+                DetailPanel.Show(Molecule);
+            });
         }
     }
 }
