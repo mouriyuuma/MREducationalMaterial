@@ -22,9 +22,21 @@ MonoBehaviour:
   EncyclopediaModelPrefab: {fileID: 0}
   RequiredAtoms:
   - AtomId: 0
+    ElementType: O
+  - AtomId: 1
     ElementType: H
-  - AtomId: 0
+  - AtomId: 2
     ElementType: H
-  - AtomId: 0
-    ElementType: H
-  RequiredBonds: []
+  RequiredBonds:
+  - AtomIdA: 0
+    BondIndexA: 0
+    AtomIdB: 1
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 0
+    BondIndexA: 0
+    AtomIdB: 2
+    BondIndexB: 0
+    BondOrder: 1
+  Difficulty: 1
+  Hint: 

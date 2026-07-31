@@ -64,6 +64,15 @@ public class MoleculeData : ScriptableObject
     
     [Tooltip("どの原子の、何番目の結合手（腕）同士が繋がっているべきかのリスト")]
     public List<BondEdgeRequirement> RequiredBonds;
+
+    [Header("=== パズル用：追加情報 ===")]
+    [Tooltip("パズルの難易度 (1-3)")]
+    [Range(1, 3)]
+    public int Difficulty = 1;
+
+    [Tooltip("お題のヒントテキスト")]
+    [TextArea(2, 5)]
+    public string Hint;
 }
 
 

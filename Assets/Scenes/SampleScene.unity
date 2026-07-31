@@ -580,7 +580,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _moleculeNameText: {fileID: 1108194943}
   _formulaText: {fileID: 252184057}
+  _progressText: {fileID: 0}
+  _structureImage: {fileID: 0}
   _clearTextObject: {fileID: 1724136408}
+  _nextButtonObject: {fileID: 0}
 --- !u!1 &249061889
 GameObject:
   m_ObjectHideFlags: 0
@@ -946,6 +949,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 609b20ded66b58f40958b6728d2c1871, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  PuzzleList:
+  - {fileID: 11400000, guid: 26c02f09cefb1024999582dcc92a727d, type: 2}
+  - {fileID: 11400000, guid: 43f4b718b449f4a41abe98ee5b52943c, type: 2}
   CurrentTargetData: {fileID: 0}
   ClearEffectPrefab: {fileID: 3782534849118916108, guid: f4b54d3b8cee10145a8619428dd58afd, type: 3}
   ClearSound: {fileID: 0}

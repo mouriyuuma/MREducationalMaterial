@@ -22,5 +22,44 @@ MonoBehaviour:
     \u71C3\u6599\u30FB\u6EB6\u5264\u3068\u3057\u3066\u5DE5\u696D\u7684\u306B\u5E83\u304F\u4F7F\u7528\u3055\u308C\u308B\u3002"
   Categories: 4
   EncyclopediaModelPrefab: {fileID: 0}
-  RequiredAtoms: []
-  RequiredBonds: []
+  RequiredAtoms:
+  - AtomId: 0
+    ElementType: C
+  - AtomId: 1
+    ElementType: O
+  - AtomId: 2
+    ElementType: H
+  - AtomId: 3
+    ElementType: H
+  - AtomId: 4
+    ElementType: H
+  - AtomId: 5
+    ElementType: H
+  RequiredBonds:
+  - AtomIdA: 0
+    BondIndexA: 0
+    AtomIdB: 1
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 0
+    BondIndexA: 1
+    AtomIdB: 2
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 0
+    BondIndexA: 2
+    AtomIdB: 3
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 0
+    BondIndexA: 3
+    AtomIdB: 4
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 1
+    BondIndexA: 1
+    AtomIdB: 5
+    BondIndexB: 0
+    BondOrder: 1
+  Difficulty: 1
+  Hint: 
