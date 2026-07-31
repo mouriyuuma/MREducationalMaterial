@@ -879,6 +879,7 @@ GameObject:
   - component: {fileID: 363969265}
   - component: {fileID: 363969264}
   - component: {fileID: 363969263}
+  - component: {fileID: 363969266}
   m_Layer: 0
   m_Name: EventSystem
   m_TagString: Untagged
@@ -947,6 +948,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &363969266
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 363969262}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2518c50cb3fc6a6458d4b743c2f69c7d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_SendPointerHoverToParent: 1
+  _useInitialPressPositionForDrag: 1
+  _exclusiveMode: 1
 --- !u!1001 &574349973
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1622,6 +1638,7 @@ GameObject:
   - component: {fileID: 1484312368}
   - component: {fileID: 1484312367}
   - component: {fileID: 1484312370}
+  - component: {fileID: 1484312371}
   m_Layer: 5
   m_Name: Button
   m_TagString: Untagged
@@ -1757,6 +1774,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _targetState: 0
   _targetSceneName: StartMenuScene
+--- !u!114 &1484312371
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1484312365}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f378c01ed529ef47985ef63c79e0d2e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  obj: {fileID: 1484312365}
 --- !u!1 &1493306017
 GameObject:
   m_ObjectHideFlags: 0
