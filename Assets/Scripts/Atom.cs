@@ -9,11 +9,11 @@ public class Atom : MonoBehaviour
     // 自分が持っている結合手のリスト
     public BondPoint[] BondPoints { get; private set; }
 
-    // ★追加: この原子の最大結合手数（プレハブに付けたBondPointの数＝価数）
+    // この原子の最大結合手数（プレハブに付けたBondPointの数＝価数）
     // 例: 酸素のプレハブにBondPointが2つ付いていれば、MaxValencyは 2 になる
     public int MaxValency => BondPoints != null ? BondPoints.Length : 0;
 
-    // ★追加: 現在使っている結合手数の合計（二重結合は2としてカウント）
+    // 現在使っている結合手数の合計（二重結合は2としてカウント）
     public int GetUsedValency()
     {
         int used = 0;
@@ -28,7 +28,7 @@ public class Atom : MonoBehaviour
         return used;
     }
 
-    // ★追加: 今「余っている」結合手数
+    // 今「余っている」結合手数
     public int AvailableValency => MaxValency - GetUsedValency();
     
     private void Awake()

@@ -5,8 +5,17 @@ public class PuzzleManager : MonoBehaviour
 {
     public static PuzzleManager Instance { get; private set; }
 
+    [Tooltip("出題する問題リスト")]
+    public MoleculeData[] PuzzleList;
+
     [Tooltip("現在のお題データ（ScriptableObject）")]
     public MoleculeData CurrentTargetData;
+
+    private int _currentPuzzleIndex = 0;
+    private bool _isPuzzleCleared = false;
+
+    public int CurrentPuzzleIndex => _currentPuzzleIndex;
+    public int TotalPuzzles => PuzzleList != null ? PuzzleList.Length : 0;
 
     [Header("Feedback Effects")]
     [Tooltip("クリア時に出すパーティクルなどのプレハブ")]
@@ -26,16 +35,66 @@ public class PuzzleManager : MonoBehaviour
         _audioSource.playOnAwake = false;
     }
 
+    private void Start()
+    {
+        LoadPuzzle(0);
+    }
+
+    public void LoadPuzzle(int index)
+    {
+        if (PuzzleList == null || PuzzleList.Length == 0) return;
+
+        _currentPuzzleIndex = index;
+        
+        if (_currentPuzzleIndex < PuzzleList.Length)
+        {
+            CurrentTargetData = PuzzleList[_currentPuzzleIndex];
+            _isPuzzleCleared = false;
+
+            if (TargetBoardUI.Instance != null)
+            {
+                TargetBoardUI.Instance.RefreshDisplay();
+            }
+        }
+        else
+        {
+            // 全問クリア
+            if (TargetBoardUI.Instance != null)
+            {
+                TargetBoardUI.Instance.ShowCompleteVisual();
+            }
+        }
+    }
+
     // MoleculeManagerから「ひとまとまりの分子」が送られてくる
     public void CheckMoleculeMatch(List<Atom> moleculeAtoms)
     {
-        if (CurrentTargetData == null) return;
+        if (CurrentTargetData == null)
+        {
+            Debug.Log("【判定】CurrentTargetData が null です。");
+            return;
+        }
+        if (_isPuzzleCleared)
+        {
+            Debug.Log("【判定】既にクリア済みです。");
+            return;
+        }
+
+        Debug.Log($"【判定開始】現在の原子グループのサイズ: {moleculeAtoms.Count}");
 
         // ステップ1：原子の「数と種類」が合っているかチェック
-        if (!CheckAtomCounts(moleculeAtoms)) return;
+        if (!CheckAtomCounts(moleculeAtoms))
+        {
+            Debug.Log("【判定失敗】原子の数または種類が一致しません。");
+            return;
+        }
 
         // ステップ2：繋がり方（構造）が合っているかチェック
-        if (!CheckBondStructure(moleculeAtoms)) return;
+        if (!CheckBondStructure(moleculeAtoms))
+        {
+            Debug.Log("【判定失敗】結合の構造（繋がり方）が一致しません。");
+            return;
+        }
 
         // すべて一致したらクリア！
         Debug.Log($"【クリア】お題「{CurrentTargetData.MoleculeName}」が完成しました！");
@@ -51,6 +110,7 @@ public class PuzzleManager : MonoBehaviour
         // 1. 全体の原子数が一致するか（そもそも数が違えば不合格）
         if (moleculeAtoms.Count != CurrentTargetData.RequiredAtoms.Count)
         {
+            Debug.Log($"【判定】全体の原子数が違います。現在:{moleculeAtoms.Count} / お題:{CurrentTargetData.RequiredAtoms.Count}");
             return false;
         }
 
@@ -104,12 +164,20 @@ public class PuzzleManager : MonoBehaviour
 
         if (totalPlayerBonds != CurrentTargetData.RequiredBonds.Count)
         {
+            Debug.Log($"【判定】結合の総数が違います。プレイヤーの結合数:{totalPlayerBonds} / お題の要求数:{CurrentTargetData.RequiredBonds.Count}");
             return false; // 結合の数が違うなら、その時点で不正解
         }
 
         // 2. バックトラッキング（総当たり探索）で、完全一致する配置を探す
         Dictionary<int, Atom> mapping = new Dictionary<int, Atom>();
-        return FindMapping(0, moleculeAtoms, mapping);
+        bool isMatch = FindMapping(0, moleculeAtoms, mapping);
+
+        if (!isMatch)
+        {
+            Debug.Log("【判定失敗】すべての組み合わせを試しましたが、お題の構造と完全一致するパターンがありませんでした。直前の【詳細ログ】を確認してください。");
+        }
+
+        return isMatch;
     }
 
     // お題の原子(ID)に対して、プレイヤーのどの原子を割り当てるか、全パターンを試すメソッド
@@ -162,20 +230,44 @@ public class PuzzleManager : MonoBehaviour
             if (mapping.TryGetValue(reqBond.AtomIdA, out Atom atomA) &&
                 mapping.TryGetValue(reqBond.AtomIdB, out Atom atomB))
             {
-                // プレハブの腕の数が足りない場合はエラー（データ設定ミスの防止）
-                if (reqBond.BondIndexA >= atomA.BondPoints.Length || reqBond.BondIndexB >= atomB.BondPoints.Length)
-                    return false; 
+                bool isBondFound = false;
 
-                BondPoint bpA = atomA.BondPoints[reqBond.BondIndexA];
-                BondPoint bpB = atomB.BondPoints[reqBond.BondIndexB];
+                // atomA が持っているすべての腕（BondPoint）をチェックする
+                foreach (BondPoint bpA in atomA.BondPoints)
+                {
+                    // その腕が何かに繋がっていて、かつ繋がっている先の原子が「atomB」であればOK！
+                    if (bpA.IsConnected && bpA.ConnectedTarget != null)
+                    {
+                        // 念のためのエラーチェック：相手の ParentAtom が取得できているか
+                        if (bpA.ConnectedTarget.ParentAtom == null)
+                        {
+                            Debug.LogWarning($"【警告】{atomA.ElementType} が繋がっている先の BondPoint に ParentAtom が設定されていません！");
+                            continue;
+                        }
 
-                // 1. 指定された腕（インデックス）同士がくっついているか？
-                if (!bpA.IsConnected || bpA.ConnectedTarget != bpB)
+                        // 【安全強化】インスタンスIDのズレを防ぐため、gameObject同士で比較する
+                        if (bpA.ConnectedTarget.ParentAtom.gameObject == atomB.gameObject)
+                        {
+                            // 結合数のチェック
+                            if (bpA.CurrentBondOrder == reqBond.BondOrder)
+                            {
+                                isBondFound = true;
+                                break;
+                            }
+                            else
+                            {
+                                Debug.Log($"【詳細ログ】{atomA.ElementType} と {atomB.ElementType} は繋がっていますが、結合数が違います。(プレイヤー:{bpA.CurrentBondOrder} / お題:{reqBond.BondOrder})");
+                            }
+                        }
+                    }
+                }
+
+                // atomA と atomB の間に正しい結合が見つからなかった場合、この割り当てパターンは不正解
+                if (!isBondFound)
+                {
+                    Debug.Log($"【詳細ログ】お題のID:{reqBond.AtomIdA}({atomA.ElementType}) と ID:{reqBond.AtomIdB}({atomB.ElementType}) の間に、正しい強さの結合が見つかりませんでした。");
                     return false;
-
-                // 2. 結合の強さ（単結合・二重結合）は一致しているか？
-                if (bpA.CurrentBondOrder != reqBond.BondOrder)
-                    return false;
+                }
             }
         }
         return true; // 今のところすべての結合ルールを満たしている
@@ -183,6 +275,8 @@ public class PuzzleManager : MonoBehaviour
 
     private void OnPuzzleCleared(List<Atom> moleculeAtoms)
     {
+        _isPuzzleCleared = true;
+
         // 1. 分子の「中心位置」を計算する
         Vector3 centerPosition = Vector3.zero;
         foreach (Atom atom in moleculeAtoms)
@@ -203,12 +297,38 @@ public class PuzzleManager : MonoBehaviour
             _audioSource.PlayOneShot(ClearSound);
         }
 
-        // ★追加: UIボードにクリア演出を表示させる
+        // UIボードにクリア演出を表示させる
         if (TargetBoardUI.Instance != null)
         {
             TargetBoardUI.Instance.ShowClearVisual();
         }
 
         // (以前の計画通り、ここにベンゼン環のモデル置換やパーティクル生成を後ほど実装します)
+    }
+
+    public void AdvanceToNextPuzzle()
+    {
+        CleanupAllAtoms();
+        LoadPuzzle(_currentPuzzleIndex + 1);
+    }
+
+    private void CleanupAllAtoms()
+    {
+        Atom[] allAtoms = FindObjectsOfType<Atom>();
+        foreach (Atom atom in allAtoms)
+        {
+            if (atom != null && atom.gameObject != null)
+            {
+                Transform parent = atom.transform.parent;
+                if (parent != null && parent.name.StartsWith("MoleculeGroup"))
+                {
+                    Destroy(parent.gameObject);
+                }
+                else
+                {
+                    Destroy(atom.gameObject);
+                }
+            }
+        }
     }
 }

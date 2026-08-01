@@ -32,7 +32,7 @@ public class BondPoint : MonoBehaviour
     // 今一番近くにある「接続可能なBondPoint」を返すメソッド
     public BondPoint GetBestHoverTarget()
     {
-        // ★修正: 自分が既に繋がっているか、親原子の「余っている手」がもう無い場合は候補を出さない
+        // 自分が既に繋がっているか、親原子の「余っている手」がもう無い場合は候補を出さない
         if (IsConnected || ParentAtom.AvailableValency <= 0) return null;
 
         BondPoint bestTarget = null;
@@ -60,16 +60,14 @@ public class BondPoint : MonoBehaviour
         return bestTarget;
     }
 
-    // 修正点2・3: 既存の OnTriggerEnter / OnTriggerExit を以下に書き換える
-
     private void OnTriggerEnter(Collider other)
     {
         BondPoint target = other.GetComponent<BondPoint>();
         if (target != null && target != this && target.ParentAtom != this.ParentAtom)
         {
-            HoverTarget = target; // 以前の処理
+            HoverTarget = target;
             
-            // 新しいレーザープレビュー用の処理
+            // レーザープレビュー用の処理
             if (!_hoverCandidates.Contains(target))
             {
                 _hoverCandidates.Add(target);
@@ -84,10 +82,10 @@ public class BondPoint : MonoBehaviour
         {
             if (target == HoverTarget)
             {
-                HoverTarget = null; // 以前の処理
+                HoverTarget = null;
             }
             
-            // 新しいレーザープレビュー用の処理
+            // レーザープレビュー用の処理
             if (_hoverCandidates.Contains(target))
             {
                 _hoverCandidates.Remove(target);

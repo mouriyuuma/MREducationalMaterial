@@ -12,6 +12,7 @@ public class EncyclopediaManager : MonoBehaviour
     [SerializeField] private Transform ContentParent; // 生成したボタン置き場
     [SerializeField] private GameObject ButtonPrefab; // ボタンの種類(Prefab)
 
+    //[SerializeField] private TMP_FontAsset japaneseFont;
     [SerializeField] private TMP_FontAsset JapaneseFont;
 
     [Header("display")]
@@ -37,6 +38,8 @@ public class EncyclopediaManager : MonoBehaviour
 
             Button Button = ButtonObject.GetComponent<Button>();
 
+            //text.font = japaneseFont;
+            text.text = molecule.MoleculeName; // 分子の名前を参照してテキストを生成
             Button.onClick.AddListener(() =>
             {
                 DetailPanel.Show(Molecule);

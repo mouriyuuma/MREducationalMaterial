@@ -12,7 +12,7 @@ EditorBuildSettings:
     path: Assets/Scenes/EncyclopediaScene.unity
     guid: 474c681e2f406d246bbd0fa98bf80f7a
   - enabled: 1
-    path: Assets/Scenes/PazzleScene.unity
+    path: Assets/Scenes/PuzzleScene.unity
     guid: 22c9dd781c368c441a87c9c9180b71a4
   - enabled: 1
     path: Assets/Scenes/SampleScene.unity

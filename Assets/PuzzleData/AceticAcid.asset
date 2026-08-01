@@ -20,5 +20,58 @@ MonoBehaviour:
   Description: "\u4EE3\u8868\u7684\u306A\u30AB\u30EB\u30DC\u30F3\u9178\u3002\u30AB\u30EB\u30DC\u30AD\u30B7\u57FA(-COOH)\u3092\u6301\u3064\u5F31\u9178\u3002\n\u304A\u9162\u306E\u4E3B\u6210\u5206\uFF08\u7D043\u301C5%\u542B\u307E\u308C\u308B\uFF09\u3002\n\u30A8\u30BF\u30CE\u30FC\u30EB\u304C\u9178\u5316\u3055\u308C\u3066\u6700\u7D42\u7684\u306B\u751F\u6210\u3059\u308B\u7269\u8CEA\u3002"
   Categories: 65
   EncyclopediaModelPrefab: {fileID: 0}
-  RequiredAtoms: []
-  RequiredBonds: []
+  RequiredAtoms:
+  - AtomId: 0
+    ElementType: C
+  - AtomId: 1
+    ElementType: H
+  - AtomId: 2
+    ElementType: H
+  - AtomId: 3
+    ElementType: H
+  - AtomId: 4
+    ElementType: C
+  - AtomId: 5
+    ElementType: O
+  - AtomId: 6
+    ElementType: O
+  - AtomId: 7
+    ElementType: H
+  RequiredBonds:
+  - AtomIdA: 0
+    BondIndexA: 0
+    AtomIdB: 1
+    BondIndexB: 0
+    BondOrder: 0
+  - AtomIdA: 0
+    BondIndexA: 0
+    AtomIdB: 2
+    BondIndexB: 0
+    BondOrder: 0
+  - AtomIdA: 0
+    BondIndexA: 0
+    AtomIdB: 3
+    BondIndexB: 0
+    BondOrder: 0
+  - AtomIdA: 0
+    BondIndexA: 0
+    AtomIdB: 4
+    BondIndexB: 0
+    BondOrder: 0
+  - AtomIdA: 4
+    BondIndexA: 0
+    AtomIdB: 5
+    BondIndexB: 0
+    BondOrder: 2
+  - AtomIdA: 4
+    BondIndexA: 0
+    AtomIdB: 6
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 6
+    BondIndexA: 0
+    AtomIdB: 7
+    BondIndexB: 0
+    BondOrder: 1
+  Difficulty: 1
+  Hint: 
