@@ -14,11 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   MoleculeName: "\u9162\u9178"
   Formula: CH3COOH
-  StructuralFormula: {fileID: 21300000, guid: a3789deb7a74c434db47190744b2b54d, type: 3}
+  StructuralFormula: {fileID: 21300000, guid: 0100ccae9362ef447ac2da01b8be19f3, type: 3}
   FunctionalGroup: "\u30AB\u30EB\u30DC\u30AD\u30B7\u57FA"
   FunctionalGroupFormula: -COOH
   Description: "\u4EE3\u8868\u7684\u306A\u30AB\u30EB\u30DC\u30F3\u9178\u3002\u30AB\u30EB\u30DC\u30AD\u30B7\u57FA(-COOH)\u3092\u6301\u3064\u5F31\u9178\u3002\n\u304A\u9162\u306E\u4E3B\u6210\u5206\uFF08\u7D043\u301C5%\u542B\u307E\u308C\u308B\uFF09\u3002\n\u30A8\u30BF\u30CE\u30FC\u30EB\u304C\u9178\u5316\u3055\u308C\u3066\u6700\u7D42\u7684\u306B\u751F\u6210\u3059\u308B\u7269\u8CEA\u3002"
-  Categories: 64
+  Categories: 65
   EncyclopediaModelPrefab: {fileID: 0}
   RequiredAtoms:
   - AtomId: 0

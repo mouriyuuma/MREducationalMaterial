@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   MoleculeName: "\u6C34"
   Formula: H2O
-  StructuralFormula: {fileID: 21300000, guid: 309e304c0e16b6b4abbf6f90ae99ca6c, type: 3}
+  StructuralFormula: {fileID: 21300000, guid: 212fc11ecc859464fb9b3f33cc3350d7, type: 3}
   FunctionalGroup: 
   FunctionalGroupFormula: 
   Description: 

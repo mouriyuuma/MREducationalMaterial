@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   MoleculeName: "\u30D9\u30F3\u30BC\u30F3"
   Formula: C6H6
-  StructuralFormula: {fileID: 21300000, guid: 831dd612979a4a6448117dcaabe119a2, type: 3}
+  StructuralFormula: {fileID: 21300000, guid: 5ff6513531d35144799801cd7c2ae6ca, type: 3}
   FunctionalGroup: "\u30D9\u30F3\u30BC\u30F3\u74B0"
   FunctionalGroupFormula: C6H6
   Description: "\u82B3\u9999\u65CF\u5316\u5408\u7269\u306E\u57FA\u672C\u9AA8\u683C\u3002\u516D\u54E1\u74B0\u69CB\u9020\u3092\u6301\u3064\u3002\n\u03C0\u96FB\u5B50\u304C\u975E\u5C40\u5728\u5316\u3057\u305F\u5171\u9CF4\u69CB\u9020\u306B\u3088\u308A\u975E\u5E38\u306B\u5B89\u5B9A\u3057\u3066\u3044\u308B\u3002\n\u767A\u304C\u3093\u6027\u304C\u3042\u308B\u305F\u3081\u53D6\u308A\u6271\u3044\u306B\u306F\u5341\u5206\u306A\u6CE8\u610F\u304C\u5FC5\u8981\u3002"
