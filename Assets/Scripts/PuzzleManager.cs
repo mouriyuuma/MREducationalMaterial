@@ -152,15 +152,22 @@ public class PuzzleManager : MonoBehaviour
     private bool CheckBondStructure(List<Atom> moleculeAtoms)
     {
         // 1. 結合の「総数」が一致するかを最初に確認する（余計な結合がないかのチェック）
-        int totalPlayerBonds = 0;
+        // 二重結合は腕を2本使うので、腕の本数ではなく「繋がっている原子のペアの数」を数える。
+        // お題の RequiredBonds も結合1本につき1エントリ（次数は BondOrder が持つ）なので、これで対応が取れる
+        HashSet<(int, int)> bondedPairs = new HashSet<(int, int)>();
         foreach (var atom in moleculeAtoms)
         {
             foreach (var bp in atom.BondPoints)
             {
-                if (bp.IsConnected) totalPlayerBonds++;
+                Atom neighbor = bp.ConnectedAtom;
+                if (neighbor == null) continue;
+
+                int a = atom.GetInstanceID();
+                int b = neighbor.GetInstanceID();
+                bondedPairs.Add(a < b ? (a, b) : (b, a));
             }
         }
-        totalPlayerBonds /= 2; // 結合は双方向なので半分にする
+        int totalPlayerBonds = bondedPairs.Count;
 
         if (totalPlayerBonds != CurrentTargetData.RequiredBonds.Count)
         {
@@ -230,42 +237,18 @@ public class PuzzleManager : MonoBehaviour
             if (mapping.TryGetValue(reqBond.AtomIdA, out Atom atomA) &&
                 mapping.TryGetValue(reqBond.AtomIdB, out Atom atomB))
             {
-                bool isBondFound = false;
+                // 結合次数 ＝ atomB に向かっている腕の本数。単結合なら1、二重結合なら2になる
+                int playerBondOrder = atomA.GetBondOrderTo(atomB);
 
-                // atomA が持っているすべての腕（BondPoint）をチェックする
-                foreach (BondPoint bpA in atomA.BondPoints)
+                if (playerBondOrder == 0)
                 {
-                    // その腕が何かに繋がっていて、かつ繋がっている先の原子が「atomB」であればOK！
-                    if (bpA.IsConnected && bpA.ConnectedTarget != null)
-                    {
-                        // 念のためのエラーチェック：相手の ParentAtom が取得できているか
-                        if (bpA.ConnectedTarget.ParentAtom == null)
-                        {
-                            Debug.LogWarning($"【警告】{atomA.ElementType} が繋がっている先の BondPoint に ParentAtom が設定されていません！");
-                            continue;
-                        }
-
-                        // 【安全強化】インスタンスIDのズレを防ぐため、gameObject同士で比較する
-                        if (bpA.ConnectedTarget.ParentAtom.gameObject == atomB.gameObject)
-                        {
-                            // 結合数のチェック
-                            if (bpA.CurrentBondOrder == reqBond.BondOrder)
-                            {
-                                isBondFound = true;
-                                break;
-                            }
-                            else
-                            {
-                                Debug.Log($"【詳細ログ】{atomA.ElementType} と {atomB.ElementType} は繋がっていますが、結合数が違います。(プレイヤー:{bpA.CurrentBondOrder} / お題:{reqBond.BondOrder})");
-                            }
-                        }
-                    }
+                    Debug.Log($"【詳細ログ】お題のID:{reqBond.AtomIdA}({atomA.ElementType}) と ID:{reqBond.AtomIdB}({atomB.ElementType}) が繋がっていません。");
+                    return false;
                 }
 
-                // atomA と atomB の間に正しい結合が見つからなかった場合、この割り当てパターンは不正解
-                if (!isBondFound)
+                if (playerBondOrder != reqBond.BondOrder)
                 {
-                    Debug.Log($"【詳細ログ】お題のID:{reqBond.AtomIdA}({atomA.ElementType}) と ID:{reqBond.AtomIdB}({atomB.ElementType}) の間に、正しい強さの結合が見つかりませんでした。");
+                    Debug.Log($"【詳細ログ】{atomA.ElementType} と {atomB.ElementType} は繋がっていますが、結合数が違います。(プレイヤー:{playerBondOrder} / お題:{reqBond.BondOrder})");
                     return false;
                 }
             }
@@ -314,6 +297,10 @@ public class PuzzleManager : MonoBehaviour
 
     private void CleanupAllAtoms()
     {
+        // 消えていく原子どうしが互いに分子を組み直そうとしないよう、削除の間だけ止めておく
+        AtomInteraction.IsTearingDown = true;
+        StartCoroutine(ResumeStructureUpdates());
+
         Atom[] allAtoms = FindObjectsOfType<Atom>();
         foreach (Atom atom in allAtoms)
         {
@@ -330,5 +317,12 @@ public class PuzzleManager : MonoBehaviour
                 }
             }
         }
+    }
+
+    // Destroy はフレームの終わりにまとめて実行されるので、それを待ってから元に戻す
+    private System.Collections.IEnumerator ResumeStructureUpdates()
+    {
+        yield return new WaitForEndOfFrame();
+        AtomInteraction.IsTearingDown = false;
     }
 }

@@ -20,5 +20,98 @@ MonoBehaviour:
   Description: "\u30D9\u30F3\u30BC\u30F3\u74B0\u306B\u30D2\u30C9\u30ED\u30AD\u30B7\u57FA(-OH)\u304C\u76F4\u63A5\u7D50\u5408\u3057\u305F\u5316\u5408\u7269\u3002\n\u30A2\u30EB\u30B3\u30FC\u30EB\u3068\u7570\u306A\u308A\u30D9\u30F3\u30BC\u30F3\u74B0\u306E\u5F71\u97FF\u3067\u5F31\u9178\u6027\u3092\u793A\u3059\u3002\n\u6B74\u53F2\u4E0A\u521D\u3081\u3066\u5916\u79D1\u624B\u8853\u306E\u6D88\u6BD2\u85AC\u3068\u3057\u3066\u4F7F\u7528\u3055\u308C\u305F\u7269\u8CEA\u3002"
   Categories: 9
   EncyclopediaModelPrefab: {fileID: 0}
-  RequiredAtoms: []
-  RequiredBonds: []
+  RequiredAtoms:
+  - AtomId: 0
+    ElementType: C
+  - AtomId: 1
+    ElementType: C
+  - AtomId: 2
+    ElementType: C
+  - AtomId: 3
+    ElementType: C
+  - AtomId: 4
+    ElementType: C
+  - AtomId: 5
+    ElementType: C
+  - AtomId: 6
+    ElementType: O
+  - AtomId: 7
+    ElementType: H
+  - AtomId: 8
+    ElementType: H
+  - AtomId: 9
+    ElementType: H
+  - AtomId: 10
+    ElementType: H
+  - AtomId: 11
+    ElementType: H
+  - AtomId: 12
+    ElementType: H
+  RequiredBonds:
+  - AtomIdA: 0
+    BondIndexA: 0
+    AtomIdB: 1
+    BondIndexB: 0
+    BondOrder: 4
+  - AtomIdA: 1
+    BondIndexA: 0
+    AtomIdB: 2
+    BondIndexB: 0
+    BondOrder: 4
+  - AtomIdA: 2
+    BondIndexA: 0
+    AtomIdB: 3
+    BondIndexB: 0
+    BondOrder: 4
+  - AtomIdA: 3
+    BondIndexA: 0
+    AtomIdB: 4
+    BondIndexB: 0
+    BondOrder: 4
+  - AtomIdA: 4
+    BondIndexA: 0
+    AtomIdB: 5
+    BondIndexB: 0
+    BondOrder: 4
+  - AtomIdA: 5
+    BondIndexA: 0
+    AtomIdB: 0
+    BondIndexB: 0
+    BondOrder: 4
+  - AtomIdA: 0
+    BondIndexA: 0
+    AtomIdB: 6
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 1
+    BondIndexA: 0
+    AtomIdB: 7
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 2
+    BondIndexA: 0
+    AtomIdB: 8
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 3
+    BondIndexA: 0
+    AtomIdB: 9
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 4
+    BondIndexA: 0
+    AtomIdB: 10
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 5
+    BondIndexA: 0
+    AtomIdB: 11
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 6
+    BondIndexA: 0
+    AtomIdB: 12
+    BondIndexB: 0
+    BondOrder: 1
+  Difficulty: 3
+  Hint: "\u30D9\u30F3\u30BC\u30F3\u74B0\u3092\u4F5C\u3063\u3066\u304B\u3089\u3001\u6C34\u7D201\u500B\u306E\u4EE3\u308F\u308A\u306B\u30D2\u30C9\u30ED\u30AD\u30B7\u57FA(-OH)\u3092\u4ED8\u3051\u307E\u3059\u3002"

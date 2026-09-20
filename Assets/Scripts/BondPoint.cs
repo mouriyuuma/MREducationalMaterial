@@ -1,63 +1,95 @@
-using System.Collections.Generic; // 修正点1: これが必要です
+using System.Collections.Generic;
 using UnityEngine;
 
 // 責任：結合手の現在の状態管理と、近くにある他の結合手の検知（センサー）
+//
+// 結合次数はここでは持たない。「同じ相手に何本の腕が向いているか」が結合次数そのものなので、
+// Atom.GetBondOrderTo() で数える。分子模型キットで腕を2本使って二重結合を作るのと同じ考え方で、
+// 腕1本につき円柱1本が見えるため、二重結合は自然に2本線として表示される。
 public class BondPoint : MonoBehaviour
 {
     public bool IsConnected { get; private set; }
     public BondPoint ConnectedTarget { get; private set; }
-    
-    // 現在重なっている（結合候補の）相手
-    public BondPoint HoverTarget { get; private set; }
-    
+
     public Atom ParentAtom { get; private set; }
 
-    // 現在の結合の強さ（1=単結合, 2=二重結合, 3=三重結合）
-    public int CurrentBondOrder { get; set; } = 1;
-
-    [Header("Bond Visuals (結合の見た目)")]
-    [Tooltip("単結合用のメイン円柱")]
-    public GameObject MainCylinder;
-    [Tooltip("二重・三重結合時に追加表示する円柱の配列（2つセットしてください）")]
-    public GameObject[] ExtraCylinders;
+    // 芳香環のπ電子として環に溶けた腕。特定の相手とは結ばれないが電子は使っている。
+    // 見た目は環の内側の円としてまとめて描くので、この腕自体は隠す
+    public bool IsPiArm { get; private set; }
 
     // 触れている（近づいている）相手のBondPointのリスト
-    private List<BondPoint> _hoverCandidates = new List<BondPoint>();
+    private readonly List<BondPoint> _hoverCandidates = new List<BondPoint>();
+
+    private SphereCollider _tipCollider;
+
+    // この腕が繋がっている相手の原子（繋がっていなければ null）
+    public Atom ConnectedAtom => (IsConnected && ConnectedTarget != null) ? ConnectedTarget.ParentAtom : null;
+
+    // 腕が向いているワールド方向
+    public Vector3 Direction => transform.up;
+
+    // 腕の先端（結合したとき相手の腕先と重なる点）のワールド座標
+    public Vector3 TipPosition
+    {
+        get
+        {
+            if (_tipCollider == null) _tipCollider = GetComponent<SphereCollider>();
+            if (_tipCollider == null) return transform.position + transform.up * 0.1f;
+            return transform.TransformPoint(_tipCollider.center);
+        }
+    }
+
+    // 原子の中心から腕の先端までの長さ
+    public float ArmLength
+    {
+        get
+        {
+            if (ParentAtom == null) return 0f;
+            return Vector3.Distance(ParentAtom.transform.position, TipPosition);
+        }
+    }
 
     public void Initialize(Atom parent)
     {
         ParentAtom = parent;
+        _tipCollider = GetComponent<SphereCollider>();
     }
 
-    // 今一番近くにある「接続可能なBondPoint」を返すメソッド
-    public BondPoint GetBestHoverTarget()
+    // この腕が指定の原子に向かって繋がっているか
+    public bool IsConnectedTo(Atom other)
     {
-        // 自分が既に繋がっているか、親原子の「余っている手」がもう無い場合は候補を出さない
-        if (IsConnected || ParentAtom.AvailableValency <= 0) return null;
+        return other != null && ConnectedAtom == other;
+    }
 
-        BondPoint bestTarget = null;
-        float minDistance = float.MaxValue;
+    // この腕が今すぐ結合に使える状態か。π電子になった腕は結合には使えない
+    public bool CanConnect()
+    {
+        return !IsConnected && !IsPiArm && ParentAtom != null && ParentAtom.AvailableValency > 0;
+    }
 
-        // リストの中から、破棄されたものや既に接続済みのものを除外（クリーンアップ）
-        _hoverCandidates.RemoveAll(bp => bp == null || bp.IsConnected);
+    // π電子として環に溶けた状態にする / 解除する
+    public void SetPiArm(bool isPi)
+    {
+        IsPiArm = isPi;
+        SetArmVisible(!isPi);
+    }
 
-        foreach (var candidate in _hoverCandidates)
+    // 腕の円柱を表示するかどうか
+    public void SetArmVisible(bool visible)
+    {
+        foreach (Renderer renderer in GetComponentsInChildren<Renderer>(true))
         {
-            // 自分と同じ原子の結合手とはくっつかないようにする
-            if (candidate.ParentAtom == this.ParentAtom) continue;
-
-            // 相手の原子に「余っている手」がない場合はスキップ（くっつかない）
-            if (candidate.ParentAtom.AvailableValency <= 0) continue;
-
-            // 距離を測って、一番近いものを記憶する
-            float dist = Vector3.Distance(transform.position, candidate.transform.position);
-            if (dist < minDistance)
-            {
-                minDistance = dist;
-                bestTarget = candidate;
-            }
+            renderer.enabled = visible;
         }
-        return bestTarget;
+    }
+
+    // 今近くにある結合候補のリスト。
+    // 多重結合の判定では「同じ相手と何ペア重なっているか」を見るので、
+    // 一番近い1つではなく候補すべてを返す
+    public IReadOnlyList<BondPoint> GetHoverCandidates()
+    {
+        _hoverCandidates.RemoveAll(bp => bp == null || bp.IsConnected);
+        return _hoverCandidates;
     }
 
     private void OnTriggerEnter(Collider other)
@@ -65,9 +97,6 @@ public class BondPoint : MonoBehaviour
         BondPoint target = other.GetComponent<BondPoint>();
         if (target != null && target != this && target.ParentAtom != this.ParentAtom)
         {
-            HoverTarget = target;
-            
-            // レーザープレビュー用の処理
             if (!_hoverCandidates.Contains(target))
             {
                 _hoverCandidates.Add(target);
@@ -80,47 +109,21 @@ public class BondPoint : MonoBehaviour
         BondPoint target = other.GetComponent<BondPoint>();
         if (target != null)
         {
-            if (target == HoverTarget)
-            {
-                HoverTarget = null;
-            }
-            
-            // レーザープレビュー用の処理
-            if (_hoverCandidates.Contains(target))
-            {
-                _hoverCandidates.Remove(target);
-            }
+            _hoverCandidates.Remove(target);
         }
     }
 
-    public void ConnectTo(BondPoint target, int bondOrder = 1)
+    public void ConnectTo(BondPoint target)
     {
         IsConnected = true;
         ConnectedTarget = target;
-        HoverTarget = null; // 結合したのでターゲットからは外す
-        
-        SetBondOrder(bondOrder); // 見た目を更新
+        // 候補リストはそのまま残す。切断されたあと、まだ重なったままでも
+        // OnTriggerEnter を待たずに再結合できるようにするため
     }
 
     public void Disconnect()
     {
         IsConnected = false;
         ConnectedTarget = null;
-        SetBondOrder(1); // 単結合に戻す
-    }
-
-    // 結合数に応じて円柱の表示を切り替えるメソッド
-    public void SetBondOrder(int order)
-    {
-        CurrentBondOrder = order;
-
-        if (MainCylinder != null) MainCylinder.SetActive(true);
-        
-        if (ExtraCylinders != null && ExtraCylinders.Length >= 2)
-        {
-            // 二重結合以上なら1本目を表示、三重結合なら2本目も表示
-            ExtraCylinders[0].SetActive(order >= 2);
-            ExtraCylinders[1].SetActive(order >= 3);
-        }
     }
 }

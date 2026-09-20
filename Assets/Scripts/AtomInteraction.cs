@@ -2,34 +2,97 @@ using System.Collections.Generic;
 using UnityEngine;
 
 // 責任：VRの掴む/離す操作と、物理的な結合(FixedJoint)の生成・破壊を担当する
+//
+// 結合次数は「同じ相手に腕を何本かけたか」で決まる。分子模型キットと同じで、
+// 腕を2本ひっかければ二重結合、3本なら三重結合になる。
+// 手を離した瞬間に重なっている腕のペアをすべて拾って、まとめて結合する。
 [RequireComponent(typeof(Atom), typeof(Rigidbody))]
 public class AtomInteraction : MonoBehaviour
 {
+    // 三重結合まで対応する
+    public const int MaxBondOrder = 3;
+
+    // 問題の切り替えやアプリ終了で原子をまとめて消している最中は true。
+    // 消えていく原子どうしが互いに分子を組み直そうとして壊れたオブジェクトに触るのを防ぐ
+    public static bool IsTearingDown { get; set; }
+
     public bool IsGrabbed { get; private set; }
 
     private Atom _atom;
     private Rigidbody _rb;
 
-    // プレビュー用の線を描画するコンポーネント
-    private LineRenderer _previewLine;
+    // プレビュー用の線。何重結合になるかを結合前に見せるため、最大3本ぶん用意する
+    private LineRenderer[] _previewLines;
 
     // 掴まれた瞬間のローカル姿勢（分子全体の同期用）
     private Vector3 _grabLocalPos;
     private Quaternion _grabLocalRot;
+
+    // 結合候補になっている腕のペア
+    private struct BondCandidate
+    {
+        public BondPoint Mine;
+        public BondPoint Theirs;
+        public float Distance;
+    }
+
+    private readonly List<BondCandidate> _candidates = new List<BondCandidate>();
+    private readonly List<BondCandidate> _bestPairs = new List<BondCandidate>();
+    private readonly List<Atom> _neighbors = new List<Atom>();
+    private readonly List<BondPoint> _armsToNeighbor = new List<BondPoint>();
+
+    // プレビューは掴んでいる間ずっと毎フレーム走るので、作業用の入れ物は使い回してゴミを出さない
+    private readonly List<Atom> _seenAtoms = new List<Atom>();
+    private readonly List<BondCandidate> _pairBuffer = new List<BondCandidate>();
+    private readonly List<BondPoint> _usedMine = new List<BondPoint>();
+    private readonly List<BondPoint> _usedTheirs = new List<BondPoint>();
+
+    // 結合次数ごとのプレビュー線の色（1本=緑 / 2本=黄 / 3本=橙）
+    private static readonly Color[] OrderColors = { Color.green, Color.yellow, new Color(1f, 0.55f, 0.1f) };
+
+    private static readonly System.Comparison<BondCandidate> ByDistance =
+        (a, b) => a.Distance.CompareTo(b.Distance);
 
     private void Awake()
     {
         _atom = GetComponent<Atom>();
         _rb = GetComponent<Rigidbody>();
 
-        // プレビュー用のLineRendererをプログラムから動的に追加して設定する
-        _previewLine = gameObject.AddComponent<LineRenderer>();
-        _previewLine.startWidth = 0.015f; // 線の太さ
-        _previewLine.endWidth = 0.015f;
-        _previewLine.material = new Material(Shader.Find("Sprites/Default")); // シンプルな発光マテリアル
-        _previewLine.startColor = Color.green; // 緑色の線
-        _previewLine.endColor = Color.cyan;    // 先端は少し水色っぽく
-        _previewLine.enabled = false;          // 最初は非表示
+        CreatePreviewLines();
+    }
+
+    // 結合次数ごとに色を変えたプレビュー線を用意する（1本=緑 / 2本=黄 / 3本=橙）
+    private void CreatePreviewLines()
+    {
+        _previewLines = new LineRenderer[MaxBondOrder];
+
+        for (int i = 0; i < MaxBondOrder; i++)
+        {
+            // 原子の子にすると原子側のスケール(0.1)で線が細くなってしまうので、親を付けずにワールドに置く
+            GameObject holder = new GameObject($"BondPreview_{name}_{i}");
+            LineRenderer line = holder.AddComponent<LineRenderer>();
+
+            line.useWorldSpace = true;
+            line.positionCount = 2;
+            line.startWidth = 0.008f;
+            line.endWidth = 0.008f;
+            line.material = new Material(Shader.Find("Sprites/Default"));
+            line.enabled = false;
+
+            _previewLines[i] = line;
+        }
+
+        ApplyPreviewColors(1);
+    }
+
+    private void ApplyPreviewColors(int order)
+    {
+        Color color = OrderColors[Mathf.Clamp(order - 1, 0, OrderColors.Length - 1)];
+        foreach (LineRenderer line in _previewLines)
+        {
+            line.startColor = color;
+            line.endColor = color;
+        }
     }
 
     // VRで掴まれた時 (Wrapperから呼ばれる)
@@ -55,40 +118,144 @@ public class AtomInteraction : MonoBehaviour
         _rb.angularVelocity = Vector3.zero;
 
         // 結合できる相手を探して結合処理を実行
-        TryConnect();
+        if (TryConnect()) return;
+
+        // 結合しなかった場合でも、引っ張って伸びたままの結合を本来の形に戻す。
+        // これをしないと「見た目は離れているのに繋がったまま」という状態が残ってしまう
+        if (HasAnyBond()) MoleculeLayout.Rebuild(FindLayoutSeed());
     }
 
-    private void TryConnect()
-    {
-        BondPoint bestMyBond = null;
-        BondPoint bestTargetBond = null;
-        float minDistance = float.MaxValue;
+    // === 結合の成立 ===
 
-        foreach (BondPoint myBond in _atom.BondPoints)
+    private bool TryConnect()
+    {
+        Atom targetAtom = FindBestConnection(_bestPairs);
+        if (targetAtom == null || _bestPairs.Count == 0) return false;
+
+        ExecuteConnection(targetAtom, _bestPairs);
+        return true;
+    }
+
+    private bool HasAnyBond()
+    {
+        if (_atom.BondPoints == null) return false;
+        foreach (BondPoint bp in _atom.BondPoints)
         {
-            BondPoint target = myBond.GetBestHoverTarget();
-            if (target != null)
+            if (bp.IsConnected) return true;
+        }
+        return false;
+    }
+
+    // 並べ直しの基準にする原子。
+    // まだ手に持たれている原子があればそれを基準にしないと、分子が手から飛び出してしまう
+    private Atom FindLayoutSeed()
+    {
+        foreach (Atom a in MoleculeLayout.CollectMolecule(_atom))
+        {
+            AtomInteraction other = a.GetComponent<AtomInteraction>();
+            if (other != null && other.IsGrabbed) return a;
+        }
+        return _atom;
+    }
+
+    // 今いちばん多くの腕が重なっている相手を探し、その腕のペアを result に詰める。
+    // 重なっている腕が2ペアなら二重結合、3ペアなら三重結合になる
+    private Atom FindBestConnection(List<BondCandidate> result)
+    {
+        result.Clear();
+        CollectCandidates();
+        if (_candidates.Count == 0) return null;
+
+        // 相手の原子ごとに、どれだけの腕が重なっているかを調べる
+        Atom bestAtom = null;
+        int bestCount = 0;
+        float bestDistance = float.MaxValue;
+
+        _seenAtoms.Clear();
+
+        foreach (BondCandidate candidate in _candidates)
+        {
+            Atom other = candidate.Theirs.ParentAtom;
+            if (other == null || _seenAtoms.Contains(other)) continue;
+            _seenAtoms.Add(other);
+
+            MatchPairs(other, _pairBuffer);
+            if (_pairBuffer.Count == 0) continue;
+
+            float totalDistance = 0f;
+            foreach (BondCandidate pair in _pairBuffer) totalDistance += pair.Distance;
+
+            // ペア数が多い方を優先し、同数なら腕どうしが近い方を選ぶ
+            if (_pairBuffer.Count > bestCount || (_pairBuffer.Count == bestCount && totalDistance < bestDistance))
             {
-                float dist = Vector3.Distance(myBond.transform.position, target.transform.position);
-                if (dist < minDistance)
-                {
-                    minDistance = dist;
-                    bestMyBond = myBond;
-                    bestTargetBond = target;
-                }
+                bestAtom = other;
+                bestCount = _pairBuffer.Count;
+                bestDistance = totalDistance;
+
+                result.Clear();
+                result.AddRange(_pairBuffer);
             }
         }
 
-        if (bestMyBond != null && bestTargetBond != null)
+        return bestAtom;
+    }
+
+    // 重なっている腕の組み合わせをすべて洗い出す
+    private void CollectCandidates()
+    {
+        _candidates.Clear();
+        if (_atom.BondPoints == null) return;
+
+        foreach (BondPoint myBond in _atom.BondPoints)
         {
-            ExecuteConnection(bestMyBond, bestTargetBond);
+            if (!myBond.CanConnect()) continue;
+
+            foreach (BondPoint theirs in myBond.GetHoverCandidates())
+            {
+                if (theirs == null || theirs.ParentAtom == _atom) continue;
+                if (!theirs.CanConnect()) continue;
+
+                _candidates.Add(new BondCandidate
+                {
+                    Mine = myBond,
+                    Theirs = theirs,
+                    Distance = Vector3.Distance(myBond.TipPosition, theirs.TipPosition)
+                });
+            }
+        }
+
+        _candidates.Sort(ByDistance);
+    }
+
+    // 特定の相手との腕を、近い順に1対1で組んでいく
+    private void MatchPairs(Atom other, List<BondCandidate> result)
+    {
+        result.Clear();
+
+        // 結べる本数は、お互いの余っている結合手の少ない方で決まる
+        int limit = Mathf.Min(_atom.AvailableValency, other.AvailableValency, MaxBondOrder);
+        if (limit <= 0) return;
+
+        _usedMine.Clear();
+        _usedTheirs.Clear();
+
+        // _candidates は距離の近い順に並んでいるので、前から採用すれば自然に良い組み合わせになる
+        foreach (BondCandidate candidate in _candidates)
+        {
+            if (result.Count >= limit) break;
+            if (candidate.Theirs.ParentAtom != other) continue;
+            if (_usedMine.Contains(candidate.Mine) || _usedTheirs.Contains(candidate.Theirs)) continue;
+
+            _usedMine.Add(candidate.Mine);
+            _usedTheirs.Add(candidate.Theirs);
+            result.Add(candidate);
         }
     }
 
-    public void ExecuteConnection(BondPoint myBond, BondPoint targetBond)
+    private void ExecuteConnection(Atom targetAtom, List<BondCandidate> pairs)
     {
-        Atom targetAtom = targetBond.ParentAtom;
         Rigidbody targetRb = targetAtom.GetComponent<Rigidbody>();
+        if (targetRb == null) return;
 
         // SDKの干渉を防ぐため物理演算を設定
         _rb.isKinematic = false;
@@ -96,47 +263,29 @@ public class AtomInteraction : MonoBehaviour
         targetRb.isKinematic = false;
         targetRb.useGravity = false;
 
-        SnapToTarget(myBond, targetBond);
-
-        // お互いにJointを張る
-        // 特定の相手に対するJointがあるかチェックして張る
-        if (!HasJointTo(targetAtom.gameObject))
+        // データレイヤーの状態を更新。ここで結ばれた腕の本数がそのまま結合次数になる
+        foreach (BondCandidate pair in pairs)
         {
-            FixedJoint joint1 = gameObject.AddComponent<FixedJoint>();
-            joint1.connectedBody = targetRb;
-            joint1.breakForce = Mathf.Infinity;
-        }
-
-        AtomInteraction targetInteraction = targetAtom.GetComponent<AtomInteraction>();
-        if (targetInteraction != null && !targetInteraction.HasJointTo(this.gameObject))
-        {
-            FixedJoint joint2 = targetAtom.gameObject.AddComponent<FixedJoint>();
-            joint2.connectedBody = _rb;
-            joint2.breakForce = Mathf.Infinity;
+            pair.Mine.ConnectTo(pair.Theirs);
+            pair.Theirs.ConnectTo(pair.Mine);
         }
 
         // BondPoint含む「すべての子コライダー」同士の衝突を無視する
-        Collider[] myCols = GetComponentsInChildren<Collider>();
-        Collider[] targetCols = targetAtom.GetComponentsInChildren<Collider>();
-        foreach (var c1 in myCols)
-        {
-            foreach (var c2 in targetCols)
-            {
-                Physics.IgnoreCollision(c1, c2, true);
-            }
-        }
+        SetCollisionIgnored(targetAtom, true);
 
-        // データレイヤーの状態を更新
-        myBond.ConnectTo(targetBond, 1);
-        targetBond.ConnectTo(myBond, 1);
+        Debug.Log($"【結合】{_atom.ElementType} と {targetAtom.ElementType} が {pairs.Count} 重結合になりました。");
 
-        // ★現象2の解決：分子全体のグループ化（親子構造の構築・統合）
-        UpdateMoleculeGrouping(this._atom);
+        // 分子全体のグループ化（親子構造の構築・統合）
+        UpdateMoleculeGrouping(_atom);
+
+        // 混成軌道の組み替え・原子の並べ直し・Jointの張り直し。
+        // まだ手に持たれている原子があればそこを基準にして、分子が手から飛び出さないようにする
+        MoleculeLayout.Rebuild(FindLayoutSeed());
 
         // 結合が完了したことをManagerに報告する
         if (MoleculeManager.Instance != null)
         {
-            MoleculeManager.Instance.OnStructureChanged(this._atom);
+            MoleculeManager.Instance.OnStructureChanged(_atom);
         }
     }
 
@@ -150,11 +299,11 @@ public class AtomInteraction : MonoBehaviour
         }
         else
         {
-            _previewLine.enabled = false; // 離したら線を消す
+            HidePreview(); // 離したら線を消す
         }
     }
 
-    // ★現象2の解決：掴まれた原子の動きに合わせて、分子全体（親グループ）を動かす
+    // 掴まれた原子の動きに合わせて、分子全体（親グループ）を動かす
     private void LateUpdate()
     {
         // 「片手持ち」のときだけ親（MoleculeGroup）を追従させる。
@@ -178,231 +327,219 @@ public class AtomInteraction : MonoBehaviour
         }
     }
 
-    // 結合プレビューの線を引くメソッド
+    // === プレビュー ===
+
+    // 結合プレビューの線を引く。重なっている腕の本数だけ線が出るので、
+    // 手を離す前に「今なら何重結合になるか」が分かる
     private void UpdateConnectionPreview()
     {
-        BondPoint bestMyBond = null;
-        BondPoint bestTargetBond = null;
-        float minDistance = float.MaxValue;
-
-        foreach (BondPoint myBond in _atom.BondPoints)
+        Atom targetAtom = FindBestConnection(_bestPairs);
+        if (targetAtom == null || _bestPairs.Count == 0)
         {
-            BondPoint target = myBond.GetBestHoverTarget();
-            if (target != null)
+            HidePreview();
+            return;
+        }
+
+        ApplyPreviewColors(_bestPairs.Count);
+
+        for (int i = 0; i < _previewLines.Length; i++)
+        {
+            if (i < _bestPairs.Count)
             {
-                float dist = Vector3.Distance(myBond.transform.position, target.transform.position);
-                if (dist < minDistance)
-                {
-                    minDistance = dist;
-                    bestMyBond = myBond;
-                    bestTargetBond = target;
-                }
+                _previewLines[i].enabled = true;
+                _previewLines[i].SetPosition(0, _bestPairs[i].Mine.TipPosition);
+                _previewLines[i].SetPosition(1, _bestPairs[i].Theirs.TipPosition);
+            }
+            else
+            {
+                _previewLines[i].enabled = false;
             }
         }
+    }
 
-        if (bestMyBond != null && bestTargetBond != null)
+    private void HidePreview()
+    {
+        if (_previewLines == null) return;
+        foreach (LineRenderer line in _previewLines)
         {
-            _previewLine.enabled = true;
-            _previewLine.SetPosition(0, bestMyBond.transform.position);
-            _previewLine.SetPosition(1, bestTargetBond.transform.position);
-        }
-        else
-        {
-            _previewLine.enabled = false;
+            if (line != null) line.enabled = false;
         }
     }
+
+    // === 切断 ===
 
     // 押し込み・引っ張りを検知するロジック
     private void CheckBondDistances()
     {
-        foreach (BondPoint myBond in _atom.BondPoints)
+        _atom.GetDistinctNeighbors(_neighbors);
+        if (_neighbors.Count == 0) return;
+
+        // GetDistinctNeighbors は共有リストなので、切断でリストが変わる前にコピーしておく
+        Atom[] neighbors = _neighbors.ToArray();
+
+        foreach (Atom targetAtom in neighbors)
         {
-            if (myBond.IsConnected && myBond.ConnectedTarget != null)
+            AtomInteraction targetInteraction = targetAtom.GetComponent<AtomInteraction>();
+
+            // 「自分も相手も掴まれている（両手で操作している）時」だけ距離判定を行う！
+            if (targetInteraction == null || !targetInteraction.IsGrabbed) continue;
+
+            // 両側から二重に処理しないよう、片方だけが判定する
+            if (gameObject.GetInstanceID() < targetAtom.gameObject.GetInstanceID()) continue;
+
+            // 本来あるべき原子間距離。多重結合ほど腕が開くぶん短くなる
+            float restDistance = MoleculeLayout.RestBondLength(_atom, targetAtom);
+            if (restDistance <= 0f) continue;
+
+            float currentDistance = Vector3.Distance(transform.position, targetAtom.transform.position);
+
+            // 基準距離の 1.4倍 以上引っ張られたら引きちぎる
+            if (currentDistance > restDistance * 1.4f)
             {
-                Atom targetAtom = myBond.ConnectedTarget.ParentAtom;
-                AtomInteraction targetInteraction = targetAtom.GetComponent<AtomInteraction>();
-
-                // 「自分も相手も掴まれている（両手で操作している）時」だけ距離判定を行う！
-                if (this.IsGrabbed && targetInteraction != null && targetInteraction.IsGrabbed)
-                {
-                    if (this.gameObject.GetInstanceID() < targetAtom.gameObject.GetInstanceID())
-                        continue;
-
-                    float myDist = Vector3.Distance(transform.position, myBond.transform.position);
-                    float targetDist = Vector3.Distance(targetAtom.transform.position, myBond.ConnectedTarget.transform.position);
-                    float baseDistance = myDist + targetDist;
-
-                    float currentDistance = Vector3.Distance(transform.position, targetAtom.transform.position);
-
-                    // ★現象1の解決：基準距離の 1.4倍 以上引っ張られたら BreakBond を呼び出す
-                    if (currentDistance > baseDistance * 1.4f)
-                    {
-                        BreakBond(myBond, myBond.ConnectedTarget);
-                        return; // 切断後はループを抜ける
-                    }
-
-                    int currentOrder = myBond.CurrentBondOrder;
-                    int newOrder = currentOrder;
-
-                    if (currentDistance < baseDistance * 0.55f) newOrder = 3;
-                    else if (currentDistance < baseDistance * 0.75f) newOrder = 2;
-                    else if (currentDistance > baseDistance * 0.85f) newOrder = 1;
-
-                    if (newOrder != currentOrder)
-                    {
-                        ChangeBondOrder(myBond, myBond.ConnectedTarget, newOrder);
-                    }
-                }
+                BreakBond(targetAtom);
+                return; // 切断後はループを抜ける
             }
         }
     }
 
-    // 結合を完全に引きちぎるメソッド
-    public void BreakBond(BondPoint myBond, BondPoint targetBond)
+    // 相手の原子との結合を完全に引きちぎる。多重結合なら使っている腕をすべて外す
+    public void BreakBond(Atom targetAtom)
     {
-        if (myBond == null || targetBond == null) return;
-        Atom targetAtom = targetBond.ParentAtom;
+        if (targetAtom == null) return;
+
+        int order = _atom.GetBondOrderTo(targetAtom);
+        if (order == 0) return;
 
         // 1. 物理的な固定（FixedJoint）を双方から完全に削除
         DestroyExistingJointsTo(targetAtom.gameObject);
-        if (targetAtom != null)
+        AtomInteraction targetInteraction = targetAtom.GetComponent<AtomInteraction>();
+        if (targetInteraction != null)
         {
-            AtomInteraction targetInteraction = targetAtom.GetComponent<AtomInteraction>();
-            if (targetInteraction != null)
-            {
-                targetInteraction.DestroyExistingJointsTo(this.gameObject);
-            }
+            targetInteraction.DestroyExistingJointsTo(gameObject);
         }
 
         // 2. 結合時に無視していた「原子同士のコリジョン」を復活させる
-        // 子コライダー含め、衝突無視を解除する
-        Collider[] myCols = GetComponentsInChildren<Collider>();
-        Collider[] targetCols = targetAtom != null ? targetAtom.GetComponentsInChildren<Collider>() : null;
-        if (myCols != null && targetCols != null)
+        SetCollisionIgnored(targetAtom, false);
+
+        // 3. データレイヤーの切断処理。多重結合でかけている腕をすべて外す
+        _atom.GetBondPointsTo(targetAtom, _armsToNeighbor);
+        foreach (BondPoint myBond in new List<BondPoint>(_armsToNeighbor))
         {
-            foreach (var c1 in myCols)
-            {
-                foreach (var c2 in targetCols)
-                {
-                    Physics.IgnoreCollision(c1, c2, false);
-                }
-            }
+            if (myBond.ConnectedTarget != null) myBond.ConnectedTarget.Disconnect();
+            myBond.Disconnect();
         }
 
-        // 3. データレイヤーの切断処理
-        myBond.Disconnect();
-        targetBond.Disconnect();
+        Debug.Log($"【結合切断】{_atom.ElementType} と {targetAtom.ElementType} の{order}重結合が引きちぎられました！");
 
-        Debug.Log($"【結合切断】{_atom.ElementType} と {targetAtom.ElementType} の結合が引きちぎられました！");
+        // 4. 分子グループの再構築（切断によって独立した原子・分子を分ける）
+        UpdateMoleculeGrouping(_atom);
+        UpdateMoleculeGrouping(targetAtom);
 
-        // 4. ★現象1の解決：分子グループの再構築（切断によって独立した原子・分子を分ける）
-        UpdateMoleculeGrouping(this._atom);
-        if (targetAtom != null)
-        {
-            UpdateMoleculeGrouping(targetAtom);
-        }
+        // 5. 離れた両側とも、結合が減ったぶん混成が戻る（sp2 → sp3 など）
+        MoleculeLayout.Rebuild(_atom);
+        MoleculeLayout.Rebuild(targetAtom);
 
-        // 5. 構造が変わったことをManagerに報告
+        // 6. 構造が変わったことをManagerに報告
         if (MoleculeManager.Instance != null)
         {
-            MoleculeManager.Instance.OnStructureChanged(this._atom);
-            if (targetAtom != null)
-            {
-                MoleculeManager.Instance.OnStructureChanged(targetAtom);
-            }
+            MoleculeManager.Instance.OnStructureChanged(_atom);
+            MoleculeManager.Instance.OnStructureChanged(targetAtom);
         }
     }
 
-    // 結合の強さを変更し、再固定するメソッド
-    private void ChangeBondOrder(BondPoint myBond, BondPoint targetBond, int newOrder)
+    private void OnApplicationQuit()
     {
-        myBond.SetBondOrder(newOrder);
-        targetBond.SetBondOrder(newOrder);
-
-        RebuildJoint(myBond, targetBond, newOrder);
-
-        if (MoleculeManager.Instance != null)
-        {
-            MoleculeManager.Instance.OnStructureChanged(this._atom);
-        }
-    }
-
-    private void RebuildJoint(BondPoint myBond, BondPoint targetBond, int newOrder)
-    {
-        Atom targetAtom = targetBond.ParentAtom;
-        Rigidbody targetRb = targetAtom.GetComponent<Rigidbody>();
-
-        DestroyExistingJointsTo(targetAtom.gameObject);
-        targetAtom.GetComponent<AtomInteraction>().DestroyExistingJointsTo(this.gameObject);
-
-        SnapToTarget(myBond, targetBond, newOrder);
-
-        FixedJoint joint1 = gameObject.AddComponent<FixedJoint>();
-        joint1.connectedBody = targetRb;
-        joint1.breakForce = Mathf.Infinity;
-
-        FixedJoint joint2 = targetAtom.gameObject.AddComponent<FixedJoint>();
-        joint2.connectedBody = _rb;
-        joint2.breakForce = Mathf.Infinity;
-    }
-
-    public void DestroyExistingJointsTo(GameObject targetObject)
-    {
-        FixedJoint[] joints = GetComponents<FixedJoint>();
-        foreach (var j in joints)
-        {
-            if (j.connectedBody != null && j.connectedBody.gameObject == targetObject)
-            {
-                Destroy(j);
-            }
-        }
-    }
-
-    private void SnapToTarget(BondPoint myBond, BondPoint targetBond, int bondOrder = 1)
-    {
-        Quaternion rotationDiff = Quaternion.FromToRotation(myBond.transform.up, -targetBond.transform.up);
-        transform.rotation = rotationDiff * transform.rotation;
-
-        float distanceMultiplier = 1.0f;
-        if (bondOrder == 2) distanceMultiplier = 0.7f;
-        if (bondOrder == 3) distanceMultiplier = 0.5f;
-
-        SphereCollider myCol = myBond.GetComponent<SphereCollider>();
-        SphereCollider targetCol = targetBond.GetComponent<SphereCollider>();
-
-        Vector3 myLocalTip = myCol.center * distanceMultiplier;
-        Vector3 targetLocalTip = targetCol.center * distanceMultiplier;
-
-        Vector3 myVirtualTip = myBond.transform.TransformPoint(myLocalTip);
-        Vector3 targetVirtualTip = targetBond.transform.TransformPoint(targetLocalTip);
-
-        Vector3 offset = transform.position - myVirtualTip;
-        transform.position = targetVirtualTip + offset;
+        IsTearingDown = true;
     }
 
     private void OnDestroy()
     {
-        if (_atom == null || _atom.BondPoints == null) return;
-
-        foreach (BondPoint myPoint in _atom.BondPoints)
+        if (!IsTearingDown && _atom != null && _atom.BondPoints != null)
         {
-            if (myPoint.IsConnected && myPoint.ConnectedTarget != null)
+            _atom.GetDistinctNeighbors(_neighbors);
+            Atom[] neighbors = _neighbors.ToArray();
+
+            foreach (BondPoint myPoint in _atom.BondPoints)
             {
-                Atom neighborAtom = myPoint.ConnectedTarget.ParentAtom;
-
-                myPoint.ConnectedTarget.Disconnect();
+                if (myPoint.ConnectedTarget != null) myPoint.ConnectedTarget.Disconnect();
                 myPoint.Disconnect();
+            }
 
-                if (MoleculeManager.Instance != null && neighborAtom != null)
+            foreach (Atom neighbor in neighbors)
+            {
+                if (neighbor == null) continue;
+
+                UpdateMoleculeGrouping(neighbor);
+                MoleculeLayout.Rebuild(neighbor);
+
+                if (MoleculeManager.Instance != null)
                 {
-                    MoleculeManager.Instance.OnStructureChanged(neighborAtom);
+                    MoleculeManager.Instance.OnStructureChanged(neighbor);
                 }
             }
         }
 
-        if (_previewLine != null && _previewLine.material != null)
+        if (_previewLines != null)
         {
-            Destroy(_previewLine.material);
+            foreach (LineRenderer line in _previewLines)
+            {
+                if (line == null) continue;
+                if (line.material != null) Destroy(line.material);
+                Destroy(line.gameObject);
+            }
+        }
+    }
+
+    // === Joint / コライダーのヘルパー ===
+
+    // MoleculeLayout が並べ直す前に呼ぶ。動かしている最中に物理が引っぱり合うのを防ぐ
+    public void DestroyAllJoints()
+    {
+        foreach (FixedJoint joint in GetComponents<FixedJoint>())
+        {
+            Destroy(joint);
+        }
+    }
+
+    // MoleculeLayout が並べ直したあとに呼ぶ。DestroyAllJoints の直後に使う前提
+    public void CreateJointTo(Atom other)
+    {
+        if (other == null) return;
+
+        Rigidbody otherRb = other.GetComponent<Rigidbody>();
+        if (otherRb == null) return;
+
+        FixedJoint joint = gameObject.AddComponent<FixedJoint>();
+        joint.connectedBody = otherRb;
+        joint.breakForce = Mathf.Infinity;
+        joint.enableCollision = false;
+    }
+
+    public void DestroyExistingJointsTo(GameObject targetObject)
+    {
+        foreach (FixedJoint joint in GetComponents<FixedJoint>())
+        {
+            if (joint.connectedBody != null && joint.connectedBody.gameObject == targetObject)
+            {
+                Destroy(joint);
+            }
+        }
+    }
+
+    private void SetCollisionIgnored(Atom other, bool ignored)
+    {
+        if (other == null) return;
+
+        Collider[] myCols = GetComponentsInChildren<Collider>();
+        Collider[] otherCols = other.GetComponentsInChildren<Collider>();
+
+        foreach (Collider c1 in myCols)
+        {
+            foreach (Collider c2 in otherCols)
+            {
+                if (c1 == null || c2 == null) continue;
+                Physics.IgnoreCollision(c1, c2, ignored);
+            }
         }
     }
 
@@ -412,7 +549,7 @@ public class AtomInteraction : MonoBehaviour
     {
         if (startAtom == null) return;
 
-        List<Atom> connectedAtoms = GetConnectedMoleculeGroup(startAtom);
+        List<Atom> connectedAtoms = MoleculeLayout.CollectMolecule(startAtom);
 
         // 1つの原子（単体）になった場合はグループ解除
         if (connectedAtoms.Count <= 1)
@@ -470,47 +607,12 @@ public class AtomInteraction : MonoBehaviour
         }
     }
 
-    private static List<Atom> GetConnectedMoleculeGroup(Atom startAtom)
-    {
-        List<Atom> result = new List<Atom>();
-        HashSet<Atom> visited = new HashSet<Atom>();
-        Queue<Atom> queue = new Queue<Atom>();
-
-        queue.Enqueue(startAtom);
-        visited.Add(startAtom);
-
-        while (queue.Count > 0)
-        {
-            Atom current = queue.Dequeue();
-            result.Add(current);
-
-            if (current.BondPoints != null)
-            {
-                foreach (BondPoint bp in current.BondPoints)
-                {
-                    if (bp.IsConnected && bp.ConnectedTarget != null && bp.ConnectedTarget.ParentAtom != null)
-                    {
-                        Atom neighbor = bp.ConnectedTarget.ParentAtom;
-                        if (!visited.Contains(neighbor))
-                        {
-                            visited.Add(neighbor);
-                            queue.Enqueue(neighbor);
-                        }
-                    }
-                }
-            }
-        }
-
-        return result;
-    }
-
     // FixedJointの重複チェック用ヘルパー
     public bool HasJointTo(GameObject targetObject)
     {
-        FixedJoint[] joints = GetComponents<FixedJoint>();
-        foreach (var j in joints)
+        foreach (FixedJoint joint in GetComponents<FixedJoint>())
         {
-            if (j.connectedBody != null && j.connectedBody.gameObject == targetObject)
+            if (joint.connectedBody != null && joint.connectedBody.gameObject == targetObject)
             {
                 return true;
             }

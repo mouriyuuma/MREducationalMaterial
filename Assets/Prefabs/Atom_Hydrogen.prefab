@@ -391,8 +391,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26b224f691992344fab8d9b0556a78b0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  MainCylinder: {fileID: 8752244269721054322}
-  ExtraCylinders: []
 --- !u!135 &1721904071998871086
 SphereCollider:
   m_ObjectHideFlags: 0

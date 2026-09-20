@@ -42,22 +42,22 @@ MonoBehaviour:
     BondIndexA: 0
     AtomIdB: 1
     BondIndexB: 0
-    BondOrder: 0
+    BondOrder: 1
   - AtomIdA: 0
     BondIndexA: 0
     AtomIdB: 2
     BondIndexB: 0
-    BondOrder: 0
+    BondOrder: 1
   - AtomIdA: 0
     BondIndexA: 0
     AtomIdB: 3
     BondIndexB: 0
-    BondOrder: 0
+    BondOrder: 1
   - AtomIdA: 0
     BondIndexA: 0
     AtomIdB: 4
     BondIndexB: 0
-    BondOrder: 0
+    BondOrder: 1
   - AtomIdA: 4
     BondIndexA: 0
     AtomIdB: 5
