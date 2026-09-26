@@ -12,6 +12,9 @@ public class AtomInteraction : MonoBehaviour
     // 三重結合まで対応する
     public const int MaxBondOrder = 3;
 
+    // 本来の結合長の何倍まで引っ張ったら切れるか
+    public const float BreakStretchRatio = 1.4f;
+
     // 問題の切り替えやアプリ終了で原子をまとめて消している最中は true。
     // 消えていく原子どうしが互いに分子を組み直そうとして壊れたオブジェクトに触るのを防ぐ
     public static bool IsTearingDown { get; set; }
@@ -24,9 +27,12 @@ public class AtomInteraction : MonoBehaviour
     // プレビュー用の線。何重結合になるかを結合前に見せるため、最大3本ぶん用意する
     private LineRenderer[] _previewLines;
 
-    // 掴まれた瞬間のローカル姿勢（分子全体の同期用）
+    // 分子全体を追従させるときの基準ローカル姿勢
     private Vector3 _grabLocalPos;
     private Quaternion _grabLocalRot;
+
+    // 前のフレームで分子の追従を行っていたか。追従の再開時に基準を取り直すために見る
+    private bool _isFollowing;
 
     // 結合候補になっている腕のペア
     private struct BondCandidate
@@ -100,12 +106,8 @@ public class AtomInteraction : MonoBehaviour
     {
         IsGrabbed = true;
 
-        // 親（MoleculeGroup）がいる場合、掴んだ時点のローカル位置関係を記憶
-        if (transform.parent != null)
-        {
-            _grabLocalPos = transform.localPosition;
-            _grabLocalRot = transform.localRotation;
-        }
+        // 追従の基準は LateUpdate で追従を始めるときに取り直す
+        _isFollowing = false;
     }
 
     // VRで離された時 (Wrapperから呼ばれる)
@@ -120,9 +122,9 @@ public class AtomInteraction : MonoBehaviour
         // 結合できる相手を探して結合処理を実行
         if (TryConnect()) return;
 
-        // 結合しなかった場合でも、引っ張って伸びたままの結合を本来の形に戻す。
-        // これをしないと「見た目は離れているのに繋がったまま」という状態が残ってしまう
-        if (HasAnyBond()) MoleculeLayout.Rebuild(FindLayoutSeed());
+        // 結合しなかった場合でも組み直す。引っ張って伸びたままの形を戻すのと、
+        // 掴んでいる間は持ち越していた切断後の組み直しを、ここでまとめて行う
+        MoleculeLayout.Rebuild(FindLayoutSeed(_atom));
     }
 
     // === 結合の成立 ===
@@ -136,26 +138,36 @@ public class AtomInteraction : MonoBehaviour
         return true;
     }
 
-    private bool HasAnyBond()
+    // 並べ直しの基準にする原子。基準にした原子は動かず、まわりがそれに合わせて配置される。
+    //
+    // まだ手に持たれている原子があればそれを優先する（分子が手から飛び出さないように）。
+    // いなければ preferred をそのまま使う。
+    // 新しくくっつけた原子を基準にしてしまうと、その1個に合わせて分子全体が動いてしまうので、
+    // 呼ぶ側は「もともと大きかったほうの分子」を渡すこと
+    private static Atom FindLayoutSeed(Atom preferred)
     {
-        if (_atom.BondPoints == null) return false;
-        foreach (BondPoint bp in _atom.BondPoints)
-        {
-            if (bp.IsConnected) return true;
-        }
-        return false;
-    }
+        if (preferred == null) return null;
 
-    // 並べ直しの基準にする原子。
-    // まだ手に持たれている原子があればそれを基準にしないと、分子が手から飛び出してしまう
-    private Atom FindLayoutSeed()
-    {
-        foreach (Atom a in MoleculeLayout.CollectMolecule(_atom))
+        foreach (Atom a in MoleculeLayout.CollectMolecule(preferred))
         {
             AtomInteraction other = a.GetComponent<AtomInteraction>();
             if (other != null && other.IsGrabbed) return a;
         }
-        return _atom;
+        return preferred;
+    }
+
+    // まだ手に持たれている原子がある分子は組み直さない（手を離したときに行う）
+    private static void RebuildIfReleased(Atom atom)
+    {
+        if (atom == null) return;
+
+        foreach (Atom a in MoleculeLayout.CollectMolecule(atom))
+        {
+            AtomInteraction interaction = a.GetComponent<AtomInteraction>();
+            if (interaction != null && interaction.IsGrabbed) return;
+        }
+
+        MoleculeLayout.Rebuild(atom);
     }
 
     // 今いちばん多くの腕が重なっている相手を探し、その腕のペアを result に詰める。
@@ -257,6 +269,13 @@ public class AtomInteraction : MonoBehaviour
         Rigidbody targetRb = targetAtom.GetComponent<Rigidbody>();
         if (targetRb == null) return;
 
+        // くっつける前に、どちらが大きい分子かを調べておく。
+        // 小さいほう（たいていは今手に持っている1個）を基準にすると、
+        // 大きい分子のほうが動いて既存の原子の配置が入れ替わってしまう
+        int mySize = MoleculeLayout.CollectMolecule(_atom).Count;
+        int targetSize = MoleculeLayout.CollectMolecule(targetAtom).Count;
+        Atom largerSide = targetSize > mySize ? targetAtom : _atom;
+
         // SDKの干渉を防ぐため物理演算を設定
         _rb.isKinematic = false;
         _rb.useGravity = false;
@@ -279,8 +298,8 @@ public class AtomInteraction : MonoBehaviour
         UpdateMoleculeGrouping(_atom);
 
         // 混成軌道の組み替え・原子の並べ直し・Jointの張り直し。
-        // まだ手に持たれている原子があればそこを基準にして、分子が手から飛び出さないようにする
-        MoleculeLayout.Rebuild(FindLayoutSeed());
+        // もともと大きかったほうの分子を基準にして、既存の配置が動かないようにする
+        MoleculeLayout.Rebuild(FindLayoutSeed(largerSide));
 
         // 結合が完了したことをManagerに報告する
         if (MoleculeManager.Instance != null)
@@ -308,23 +327,39 @@ public class AtomInteraction : MonoBehaviour
     {
         // 「片手持ち」のときだけ親（MoleculeGroup）を追従させる。
         // 両手で分子内の2つを掴んでいるときは追従をスキップし、手の引きちぎり動作（CheckBondDistances）に委ねる！
-        if (IsGrabbed && transform.parent != null && !IsAnyOtherAtomInGroupGrabbed())
+        bool shouldFollow = IsGrabbed && transform.parent != null && !IsAnyOtherAtomInGroupGrabbed();
+
+        if (!shouldFollow)
         {
-            // VR SDKによって動かされたこの原子の目標ワールド座標・回転を取得
-            Vector3 targetWorldPos = transform.position;
-            Quaternion targetWorldRot = transform.rotation;
-
-            // 原子自体のローカル変形を防ぐため、元のローカル姿勢に固定
-            transform.localPosition = _grabLocalPos;
-            transform.localRotation = _grabLocalRot;
-
-            // この原子が目標位置・回転にピッタリ合うように、親（MoleculeGroup）側を移動・回転させる
-            Quaternion deltaRot = targetWorldRot * Quaternion.Inverse(transform.rotation);
-            Vector3 localOffset = transform.position - transform.parent.position;
-
-            transform.parent.rotation = deltaRot * transform.parent.rotation;
-            transform.parent.position = targetWorldPos - (deltaRot * localOffset);
+            _isFollowing = false;
+            return;
         }
+
+        // 追従を始める（両手持ちから片手持ちに戻った場合も含む）時点の姿勢を基準にする。
+        // 掴んだ瞬間の値を使い続けると、その間に分子が組み替わったり引き伸ばされたりしたぶん、
+        // 追従の再開時にいきなり大きな補正がかかって分子が飛んでしまう
+        if (!_isFollowing)
+        {
+            _grabLocalPos = transform.localPosition;
+            _grabLocalRot = transform.localRotation;
+            _isFollowing = true;
+            return;
+        }
+
+        // VR SDKによって動かされたこの原子の目標ワールド座標・回転を取得
+        Vector3 targetWorldPos = transform.position;
+        Quaternion targetWorldRot = transform.rotation;
+
+        // 原子自体のローカル変形を防ぐため、元のローカル姿勢に固定
+        transform.localPosition = _grabLocalPos;
+        transform.localRotation = _grabLocalRot;
+
+        // この原子が目標位置・回転にピッタリ合うように、親（MoleculeGroup）側を移動・回転させる
+        Quaternion deltaRot = targetWorldRot * Quaternion.Inverse(transform.rotation);
+        Vector3 localOffset = transform.position - transform.parent.position;
+
+        transform.parent.rotation = deltaRot * transform.parent.rotation;
+        transform.parent.position = targetWorldPos - (deltaRot * localOffset);
     }
 
     // === プレビュー ===
@@ -368,20 +403,29 @@ public class AtomInteraction : MonoBehaviour
 
     // === 切断 ===
 
-    // 押し込み・引っ張りを検知するロジック
+    // 引っ張りを検知して結合を引きちぎるロジック
     private void CheckBondDistances()
     {
+        // 補間の最中は原子が移動している途中なので、その距離で切ってしまわないようにする
+        if (MoleculeAnimator.IsBusy) return;
+
         _atom.GetDistinctNeighbors(_neighbors);
         if (_neighbors.Count == 0) return;
 
         // GetDistinctNeighbors は共有リストなので、切断でリストが変わる前にコピーしておく
         Atom[] neighbors = _neighbors.ToArray();
 
+        // いちばん伸びている結合を選ぶ。「引っ張った結合が切れる」となるので予想しやすい。
+        //
+        // 対象は「両手で掴んでいる2原子の間の結合」だけ。
+        // 掴んでいない相手との結合まで見てしまうと、分子を曲げようとしただけで
+        // 無関係な結合が次々に切れてしまう
+        Atom mostStretched = null;
+        float worstRatio = 0f;
+
         foreach (Atom targetAtom in neighbors)
         {
             AtomInteraction targetInteraction = targetAtom.GetComponent<AtomInteraction>();
-
-            // 「自分も相手も掴まれている（両手で操作している）時」だけ距離判定を行う！
             if (targetInteraction == null || !targetInteraction.IsGrabbed) continue;
 
             // 両側から二重に処理しないよう、片方だけが判定する
@@ -391,14 +435,18 @@ public class AtomInteraction : MonoBehaviour
             float restDistance = MoleculeLayout.RestBondLength(_atom, targetAtom);
             if (restDistance <= 0f) continue;
 
-            float currentDistance = Vector3.Distance(transform.position, targetAtom.transform.position);
-
-            // 基準距離の 1.4倍 以上引っ張られたら引きちぎる
-            if (currentDistance > restDistance * 1.4f)
+            float ratio = Vector3.Distance(transform.position, targetAtom.transform.position) / restDistance;
+            if (ratio > worstRatio)
             {
-                BreakBond(targetAtom);
-                return; // 切断後はループを抜ける
+                worstRatio = ratio;
+                mostStretched = targetAtom;
             }
+        }
+
+        // 基準距離の 1.4倍 以上引っ張られたら引きちぎる
+        if (mostStretched != null && worstRatio > BreakStretchRatio)
+        {
+            BreakBond(mostStretched);
         }
     }
 
@@ -435,9 +483,12 @@ public class AtomInteraction : MonoBehaviour
         UpdateMoleculeGrouping(_atom);
         UpdateMoleculeGrouping(targetAtom);
 
-        // 5. 離れた両側とも、結合が減ったぶん混成が戻る（sp2 → sp3 など）
-        MoleculeLayout.Rebuild(_atom);
-        MoleculeLayout.Rebuild(targetAtom);
+        // 5. 離れた両側とも、結合が減ったぶん混成が戻る（sp2 → sp3 など）。
+        // ただし、まだ手に持たれている分子はこの場では組み直さない。
+        // 切った瞬間に分子全体が作り直されると、手の中の原子が鎖の遠い端へ飛ばされたように見えるため、
+        // 手を離したとき（OnReleased）にまとめて組み直す
+        RebuildIfReleased(_atom);
+        RebuildIfReleased(targetAtom);
 
         // 6. 構造が変わったことをManagerに報告
         if (MoleculeManager.Instance != null)
@@ -570,13 +621,31 @@ public class AtomInteraction : MonoBehaviour
             return;
         }
 
-        // 既存のMoleculeGroupがあるか検索
+        // 使い回せる既存のMoleculeGroupを探す。
+        //
+        // 条件は「そのグループの中身が、今の分子の原子だけでできていること」。
+        // 切断で分子が2つに割れたとき、単に既存グループを見つけて使うと
+        // 両方の断片が同じグループに残り、結合が切れているのに一緒に動いてしまう
         GameObject targetGroup = null;
         foreach (Atom a in connectedAtoms)
         {
-            if (a.transform.parent != null && a.transform.parent.name.StartsWith("MoleculeGroup"))
+            Transform parent = a.transform.parent;
+            if (parent == null || !parent.name.StartsWith("MoleculeGroup")) continue;
+
+            bool holdsOnlyThisMolecule = true;
+            foreach (Transform child in parent)
             {
-                targetGroup = a.transform.parent.gameObject;
+                Atom childAtom = child.GetComponent<Atom>();
+                if (childAtom == null || !connectedAtoms.Contains(childAtom))
+                {
+                    holdsOnlyThisMolecule = false; // 別の分子になった原子が混じっている
+                    break;
+                }
+            }
+
+            if (holdsOnlyThisMolecule)
+            {
+                targetGroup = parent.gameObject;
                 break;
             }
         }
@@ -599,12 +668,22 @@ public class AtomInteraction : MonoBehaviour
                 Transform oldParent = a.transform.parent;
                 a.transform.SetParent(targetGroup.transform);
 
+                // 親が変わるとローカル姿勢も変わるので、追従の基準を取り直させる
+                AtomInteraction moved = a.GetComponent<AtomInteraction>();
+                if (moved != null) moved.ResetFollowReference();
+
                 if (oldParent != null && oldParent != targetGroup.transform && oldParent.childCount == 0)
                 {
                     Destroy(oldParent.gameObject);
                 }
             }
         }
+    }
+
+    // 分子の追従に使う基準姿勢を、次のフレームで取り直させる
+    public void ResetFollowReference()
+    {
+        _isFollowing = false;
     }
 
     // FixedJointの重複チェック用ヘルパー

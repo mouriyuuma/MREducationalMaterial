@@ -29,6 +29,19 @@ public class MoleculeAnimator : MonoBehaviour
 
     private static readonly List<MoleculeAnimator> Running = new List<MoleculeAnimator>();
 
+    // 補間の最中かどうか。移動の途中の距離で結合を切ってしまわないように見る
+    public static bool IsBusy
+    {
+        get
+        {
+            for (int i = Running.Count - 1; i >= 0; i--)
+            {
+                if (Running[i] == null) Running.RemoveAt(i);
+            }
+            return Running.Count > 0;
+        }
+    }
+
     private readonly List<Step> _steps = new List<Step>();
     private readonly HashSet<Transform> _owned = new HashSet<Transform>();
 

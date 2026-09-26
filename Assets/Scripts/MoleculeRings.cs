@@ -46,13 +46,47 @@ public static class MoleculeRings
                 List<Atom> path = ShortestPathAvoidingDirectBond(adjacency, a, b);
                 if (path == null || path.Count < 3) continue;
 
-                if (seen.Add(RingKey(path))) rings.Add(path);
+                if (seen.Add(RingKey(path)))
+                {
+                    Canonicalize(path);
+                    rings.Add(path);
+                }
             }
         }
 
         // 小さい環を優先する（縮合環で大きい環に取られないように）
         rings.Sort((x, y) => x.Count.CompareTo(y.Count));
         return rings;
+    }
+
+    // 環をたどる順番を毎回同じにそろえる。
+    // どの結合から環を見つけたかによって並びや向きが変わると、
+    // 同じ分子でもレイアウトのたびに環がわずかに回ってしまう
+    private static void Canonicalize(List<Atom> ring)
+    {
+        int count = ring.Count;
+        if (count < 3) return;
+
+        // いちばん小さいIDの原子を先頭に持ってくる
+        int start = 0;
+        for (int i = 1; i < count; i++)
+        {
+            if (ring[i].GetInstanceID() < ring[start].GetInstanceID()) start = i;
+        }
+
+        // 2番目に来る原子のIDが小さくなる向きにそろえる
+        bool forward = ring[(start + 1) % count].GetInstanceID()
+                       < ring[(start + count - 1) % count].GetInstanceID();
+
+        List<Atom> ordered = new List<Atom>(count);
+        for (int i = 0; i < count; i++)
+        {
+            int index = forward ? (start + i) % count : (start - i + count * 2) % count;
+            ordered.Add(ring[index]);
+        }
+
+        ring.Clear();
+        ring.AddRange(ordered);
     }
 
     // 原子から、それが属する環を引けるようにする。

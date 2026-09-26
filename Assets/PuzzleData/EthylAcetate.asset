@@ -13,12 +13,107 @@ MonoBehaviour:
   m_Name: EthylAcetate
   m_EditorClassIdentifier: 
   MoleculeName: "\u9162\u9178\u30A8\u30C1\u30EB"
-  Formula: CH3COOHC2H5
+  Formula: CH3COOC2H5
   StructuralFormula: {fileID: 21300000, guid: 9b70a5b37c7041f42844aa6c17a87628, type: 3}
   FunctionalGroup: "\u30A8\u30B9\u30C6\u30EB\u7D50\u5408"
   FunctionalGroupFormula: -COO-
   Description: "\u9162\u9178\u3068\u30A8\u30BF\u30CE\u30FC\u30EB\u304C\u7E2E\u5408\u3057\u3066\u3067\u304D\u308B\u30A8\u30B9\u30C6\u30EB\u3002\n\u679C\u7269\u306E\u3088\u3046\u306A\u7518\u3044\u9999\u308A\u3092\u6301\u3064\u3002\n\u30DE\u30CB\u30AD\u30E5\u30A2\u9664\u53BB\u5264\u3084\u63A5\u7740\u5264\u306E\u6EB6\u5264\u3068\u3057\u3066\u4F7F\u7528\u3055\u308C\u308B\u3002"
   Categories: 129
   EncyclopediaModelPrefab: {fileID: 0}
-  RequiredAtoms: []
-  RequiredBonds: []
+  RequiredAtoms:
+  - AtomId: 0
+    ElementType: C
+  - AtomId: 1
+    ElementType: C
+  - AtomId: 2
+    ElementType: O
+  - AtomId: 3
+    ElementType: O
+  - AtomId: 4
+    ElementType: C
+  - AtomId: 5
+    ElementType: C
+  - AtomId: 6
+    ElementType: H
+  - AtomId: 7
+    ElementType: H
+  - AtomId: 8
+    ElementType: H
+  - AtomId: 9
+    ElementType: H
+  - AtomId: 10
+    ElementType: H
+  - AtomId: 11
+    ElementType: H
+  - AtomId: 12
+    ElementType: H
+  - AtomId: 13
+    ElementType: H
+  RequiredBonds:
+  - AtomIdA: 0
+    BondIndexA: 0
+    AtomIdB: 1
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 1
+    BondIndexA: 0
+    AtomIdB: 2
+    BondIndexB: 0
+    BondOrder: 2
+  - AtomIdA: 1
+    BondIndexA: 0
+    AtomIdB: 3
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 3
+    BondIndexA: 0
+    AtomIdB: 4
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 4
+    BondIndexA: 0
+    AtomIdB: 5
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 0
+    BondIndexA: 0
+    AtomIdB: 6
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 0
+    BondIndexA: 0
+    AtomIdB: 7
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 0
+    BondIndexA: 0
+    AtomIdB: 8
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 4
+    BondIndexA: 0
+    AtomIdB: 9
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 4
+    BondIndexA: 0
+    AtomIdB: 10
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 5
+    BondIndexA: 0
+    AtomIdB: 11
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 5
+    BondIndexA: 0
+    AtomIdB: 12
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 5
+    BondIndexA: 0
+    AtomIdB: 13
+    BondIndexB: 0
+    BondOrder: 1
+  Difficulty: 3
+  Hint: "\u9162\u9178\u306E\u30AB\u30EB\u30DC\u30AD\u30B7\u57FA\u304B\u3089 -OH \u306E\u6C34\u7D20\u3092\u5916\u3057\u3001\u305D\u3053\u306B\u30A8\u30C1\u30EB\u57FA\u3092\u3064\u306A\u3044\u3060\u5F62\u3067\u3059\u3002"

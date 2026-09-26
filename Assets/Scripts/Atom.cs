@@ -67,6 +67,57 @@ public class Atom : MonoBehaviour
         }
     }
 
+    // 前回レイアウトしたときの σ骨格の形。
+    // これが変わっていなければ結合手はすでに正しい向きを向いているので、配置し直さない
+    public int LayoutSignature { get; set; }
+
+    // σ骨格の形を表す値。
+    //
+    // 見るのは「どの原子と繋がっているか」ではなく「何方向に、何本ずつの腕を出しているか」。
+    // 空いている腕に原子が1つ付いただけなら、腕の本数も向きも変わらないので配置し直す必要がない。
+    // 逆に二重結合ができて腕が1方向にまとまると本数が変わるので、sp3 から sp2 へ組み替える。
+    //
+    // 相手の identity を見てしまうと、原子が1つ増えるたびに既存の腕まで割り当て直され、
+    // せっかく狙って繋いだ原子が別の腕の原子と入れ替わってしまう
+    public int ComputeGeometrySignature()
+    {
+        if (BondPoints == null) return 0;
+
+        List<Atom> seen = new List<Atom>();
+        List<int> armsPerDirection = new List<int>();
+        int freeArms = 0;
+
+        foreach (var bp in BondPoints)
+        {
+            if (bp.IsPiArm) continue; // π電子は σ骨格に数えない
+
+            Atom neighbor = bp.ConnectedAtom;
+            if (neighbor == null)
+            {
+                freeArms++; // 空いている腕もいずれσ結合になるので1方向ぶんとして数える
+                continue;
+            }
+
+            int index = seen.IndexOf(neighbor);
+            if (index < 0)
+            {
+                seen.Add(neighbor);
+                armsPerDirection.Add(1);
+            }
+            else
+            {
+                armsPerDirection[index]++;
+            }
+        }
+
+        for (int i = 0; i < freeArms; i++) armsPerDirection.Add(1);
+        armsPerDirection.Sort();
+
+        int hash = IsAromatic ? 17 : 19;
+        foreach (int count in armsPerDirection) hash = hash * 31 + count;
+        return hash;
+    }
+
     // 繋がっている「異なる原子」の一覧。多重結合でも相手は1つとして数える
     public void GetDistinctNeighbors(List<Atom> result)
     {
@@ -90,5 +141,11 @@ public class Atom : MonoBehaviour
         {
             bp.Initialize(this);
         }
+
+        // プレハブの結合手の配置（炭素なら正四面体）はすでに正しいので、
+        // それを「レイアウト済み」として記録しておく。
+        // これをしないと、生成したばかりの原子が初めて結合したときだけ
+        // 形が変わったと誤判定され、無関係な腕まで配置し直されてしまう
+        LayoutSignature = ComputeGeometrySignature();
     }
 }

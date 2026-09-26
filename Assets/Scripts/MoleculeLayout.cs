@@ -22,10 +22,17 @@ public static class MoleculeLayout
     private static readonly List<Vector3> _animFromPositions = new List<Vector3>();
     private static readonly List<Quaternion> _animFromRotations = new List<Quaternion>();
 
+    // 組み替える前の分子の中心。組み替えで分子全体の位置がずれないようにするために使う
+    private static Vector3 _centroidBeforeRebuild;
+
+    // 鎖をジグザグに伸ばし直している最中かどうか（重なりが起きたときの作り直し用）
+    private static bool _extendChain;
+
     // 結合手のまとまり。「同じ相手に向かう腕の束」＝σ結合1本ぶん
     private class ArmGroup
     {
         public Atom Neighbor;                   // 余っている腕の場合は null
+        public int FirstArmIndex;               // 並び替えを毎回同じ結果にするための番号
         public List<BondPoint> Arms = new List<BondPoint>();
     }
 
@@ -56,60 +63,21 @@ public static class MoleculeLayout
 
         Dictionary<Atom, List<Atom>> ringOf = MoleculeRings.MapAtomsToRings(rings);
 
-        HashSet<Atom> placed = new HashSet<Atom>();
-        Queue<Atom> queue = new Queue<Atom>();
+        // まずはプレイヤーが作った形をなるべく残したまま配置する
+        PlaceAll(seed, ringOf, false);
 
-        if (ringOf.TryGetValue(seed, out List<Atom> seedRing))
+        // 鎖が同じ向きに巻いて自分自身に重なってしまったときだけ、ジグザグに伸ばし直す。
+        // 炭素の sp3 は 109.47° で正五角形の内角 108° とほぼ同じなので、
+        // 六員環を開いたときなどに5個で一周して両端が重なることがある
+        if (HasSelfOverlap(atoms))
         {
-            // 起点が環の中にある場合は、seed を動かさずに環全体を置く
-            PlaceRing(seedRing, seed, null);
-            foreach (Atom a in seedRing)
-            {
-                placed.Add(a);
-                queue.Enqueue(a);
-            }
-        }
-        else
-        {
-            ApplyHybridization(seed, null);
-            placed.Add(seed);
-            queue.Enqueue(seed);
+            foreach (Atom a in atoms) a.LayoutSignature = 0; // 配置し直させる
+            PlaceAll(seed, ringOf, true);
         }
 
-        List<Atom> neighbors = new List<Atom>();
-        while (queue.Count > 0)
-        {
-            Atom parent = queue.Dequeue();
-            parent.GetDistinctNeighbors(neighbors);
-
-            // ループの中でリストを詰め替えるのでコピーしてから回す
-            Atom[] currentNeighbors = neighbors.ToArray();
-            foreach (Atom child in currentNeighbors)
-            {
-                if (child == null || placed.Contains(child)) continue;
-
-                PlaceChild(parent, child);
-
-                if (ringOf.TryGetValue(child, out List<Atom> childRing))
-                {
-                    // 枝の先に環がぶら下がっていた場合。
-                    // 入口の原子から見て、親へ向かう結合が環の外向きになるように環を置く
-                    Vector3 outward = (parent.transform.position - child.transform.position).normalized;
-                    PlaceRing(childRing, child, outward);
-
-                    foreach (Atom a in childRing)
-                    {
-                        if (placed.Add(a)) queue.Enqueue(a);
-                    }
-                }
-                else
-                {
-                    ApplyHybridization(child, parent);
-                    placed.Add(child);
-                    queue.Enqueue(child);
-                }
-            }
-        }
+        // 手に持たれている原子がなければ、分子の中心が動かないように全体をずらす。
+        // そうしないと「引き伸ばして離した原子」を基準に組み直すので、分子全体の位置がずれてしまう
+        PreserveCentroidIfReleased(atoms);
 
         // 最終姿勢は transform に入っているので、いったん元に戻して滑らかに動かす。
         // Joint は補間が終わってから張る（動かしている最中に物理が引っぱり合うのを防ぐ）
@@ -158,13 +126,27 @@ public static class MoleculeLayout
         _animFromPositions.Clear();
         _animFromRotations.Clear();
 
+        _centroidBeforeRebuild = Vector3.zero;
+        foreach (Atom a in atoms)
+        {
+            if (a != null) _centroidBeforeRebuild += a.transform.position;
+        }
+        if (atoms.Count > 0) _centroidBeforeRebuild /= atoms.Count;
+
         foreach (Atom a in atoms)
         {
             if (a == null) continue;
 
-            Capture(a.transform);
+            // 手に持たれている原子は補間の対象にしない。
+            // AtomInteraction.LateUpdate が「掴まれた原子のローカル姿勢を固定して、
+            // その差分だけ親を動かす」処理をしているため、補間が毎フレーム姿勢を書き換えると
+            // 毎フレーム差分が生まれて分子全体が回り続けてしまう
+            AtomInteraction interaction = a.GetComponent<AtomInteraction>();
+            if (interaction == null || !interaction.IsGrabbed) Capture(a.transform);
+
             if (a.BondPoints == null) continue;
 
+            // 結合手の向きは親が動いても影響しないので、掴まれた原子でも補間してよい
             foreach (BondPoint bp in a.BondPoints)
             {
                 if (bp != null) Capture(bp.transform);
@@ -177,6 +159,124 @@ public static class MoleculeLayout
         _animTargets.Add(target);
         _animFromPositions.Add(target.localPosition);
         _animFromRotations.Add(target.localRotation);
+    }
+
+    // 組み替えの前後で分子の中心がずれないように、全体を平行移動する。
+    // 手に持たれている原子があるときは、その原子が動かないことのほうが大事なので何もしない
+    private static void PreserveCentroidIfReleased(List<Atom> atoms)
+    {
+        if (atoms.Count == 0) return;
+
+        Vector3 after = Vector3.zero;
+        foreach (Atom a in atoms)
+        {
+            AtomInteraction interaction = a.GetComponent<AtomInteraction>();
+            if (interaction != null && interaction.IsGrabbed) return;
+
+            after += a.transform.position;
+        }
+        after /= atoms.Count;
+
+        Vector3 shift = _centroidBeforeRebuild - after;
+        if (shift.sqrMagnitude < 1e-8f) return;
+
+        foreach (Atom a in atoms)
+        {
+            a.transform.position += shift;
+        }
+    }
+
+    // 環を先に置き、そこから枝を結合をたどって配置する。
+    // extendChain が true のときだけ、鎖をジグザグ（アンチ配座）に伸ばす
+    private static void PlaceAll(Atom seed, Dictionary<Atom, List<Atom>> ringOf, bool extendChain)
+    {
+        _extendChain = extendChain;
+
+        HashSet<Atom> placed = new HashSet<Atom>();
+        Queue<Atom> queue = new Queue<Atom>();
+
+        if (ringOf.TryGetValue(seed, out List<Atom> seedRing))
+        {
+            // 起点が環の中にある場合は、seed を動かさずに環全体を置く
+            PlaceRing(seedRing, seed, null);
+            foreach (Atom a in seedRing)
+            {
+                placed.Add(a);
+                queue.Enqueue(a);
+            }
+        }
+        else
+        {
+            ApplyHybridization(seed, null);
+            placed.Add(seed);
+            queue.Enqueue(seed);
+        }
+
+        // 鎖をジグザグに伸ばすために、どの原子から伸ばしてきたかを覚えておく
+        Dictionary<Atom, Atom> parentOf = new Dictionary<Atom, Atom>();
+
+        List<Atom> neighbors = new List<Atom>();
+        while (queue.Count > 0)
+        {
+            Atom parent = queue.Dequeue();
+            parent.GetDistinctNeighbors(neighbors);
+
+            // ループの中でリストを詰め替えるのでコピーしてから回す
+            Atom[] currentNeighbors = neighbors.ToArray();
+            foreach (Atom child in currentNeighbors)
+            {
+                if (child == null || placed.Contains(child)) continue;
+
+                PlaceChild(parent, child);
+
+                if (ringOf.TryGetValue(child, out List<Atom> childRing))
+                {
+                    // 枝の先に環がぶら下がっていた場合。
+                    // 入口の原子から見て、親へ向かう結合が環の外向きになるように環を置く
+                    Vector3 outward = (parent.transform.position - child.transform.position).normalized;
+                    PlaceRing(childRing, child, outward);
+
+                    foreach (Atom a in childRing)
+                    {
+                        if (placed.Add(a)) queue.Enqueue(a);
+                    }
+                }
+                else
+                {
+                    parentOf.TryGetValue(parent, out Atom grandparent);
+                    ApplyHybridization(child, parent, grandparent);
+
+                    parentOf[child] = parent;
+                    placed.Add(child);
+                    queue.Enqueue(child);
+                }
+            }
+        }
+
+        _extendChain = false;
+    }
+
+    // 結合していない原子どうしが重なってしまっていないか
+    private static bool HasSelfOverlap(List<Atom> atoms)
+    {
+        const float MinSeparation = 0.6f; // 結合長に対する割合
+
+        for (int i = 0; i < atoms.Count; i++)
+        {
+            for (int j = i + 1; j < atoms.Count; j++)
+            {
+                if (atoms[i].GetBondOrderTo(atoms[j]) > 0) continue;
+
+                float limit = (atoms[i].MaxValency > 0 && atoms[i].BondPoints.Length > 0
+                    ? atoms[i].BondPoints[0].ArmLength * 2f : 0.2f) * MinSeparation;
+
+                if (Vector3.Distance(atoms[i].transform.position, atoms[j].transform.position) < limit)
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     // 結合をたどって繋がっている原子をすべて集める
@@ -212,10 +312,18 @@ public static class MoleculeLayout
 
     // atom の結合手を σ骨格に沿って向け直す。
     // anchorNeighbor が指定された場合、その相手に向かう腕は「既に正しい向きに置かれている」ものとして
-    // 動かさず、残りの腕をその周りに配置する（親から順に置いていくときに使う）
-    public static void ApplyHybridization(Atom atom, Atom anchorNeighbor)
+    // 動かさず、残りの腕をその周りに配置する（親から順に置いていくときに使う）。
+    // grandparent は1つ手前の原子。鎖をジグザグに伸ばすために使う
+    public static void ApplyHybridization(Atom atom, Atom anchorNeighbor, Atom grandparent = null)
     {
         if (atom == null || atom.BondPoints == null || atom.BondPoints.Length == 0) return;
+
+        // σ骨格の形が前回と同じなら、腕はすでに正しい向きを向いている。
+        // 空いている腕に原子が1つ付いただけのときはここで抜けるので、
+        // 既存の腕やそこに繋がっている原子は一切動かない
+        int signature = atom.ComputeGeometrySignature();
+        if (signature == atom.LayoutSignature) return;
+        atom.LayoutSignature = signature;
 
         List<ArmGroup> groups = BuildArmGroups(atom, anchorNeighbor);
         int sigmaCount = groups.Count;
@@ -223,9 +331,8 @@ public static class MoleculeLayout
 
         // 今の向きをなるべく壊さないよう、1つ目のまとまりの現在の向きを基準軸にする
         Vector3 axis = GroupLocalDirection(atom, groups[0]);
-        Vector3 reference = sigmaCount > 1
-            ? GroupLocalDirection(atom, groups[1])
-            : HybridizationTable.AnyPerpendicular(axis);
+
+        Vector3 reference = GetAzimuthReference(atom, groups, anchorNeighbor, grandparent, axis);
 
         // 基準軸から他の腕を傾けるための回転軸。方位角0°が2つ目のまとまりの向きになる
         Vector3 tiltAxis = Vector3.Cross(axis, reference);
@@ -273,6 +380,34 @@ public static class MoleculeLayout
         }
     }
 
+    // 方位角 0° をどちらに向けるかを決める。
+    //
+    // そのまま「今の向き」を使うと、鎖が同じ向きに巻き続けてしまうことがある。
+    // 炭素の sp3 は 109.47° で、正五角形の内角 108° とほぼ同じなので、
+    // 巻いたまま伸ばすと5個で一周し、6個目が1個目に重なってしまう
+    // （ベンゼン環を1か所切ったときに実際に起きた）。
+    // 1つ手前の原子と反対側へ伸ばす（アンチ配座）ことで、鎖はジグザグに伸びる
+    private static Vector3 GetAzimuthReference(
+        Atom atom, List<ArmGroup> groups, Atom anchorNeighbor, Atom grandparent, Vector3 axis)
+    {
+        // ふだんはプレイヤーが作った形をそのまま残す。
+        // 鎖が巻いて自分自身に重なってしまったときだけ、ジグザグに伸ばし直す
+        if (_extendChain && anchorNeighbor != null && grandparent != null && grandparent != atom)
+        {
+            Vector3 axisWorld = atom.transform.TransformDirection(axis);
+            Vector3 perpendicular = Vector3.ProjectOnPlane(
+                grandparent.transform.position - anchorNeighbor.transform.position, axisWorld);
+
+            if (perpendicular.sqrMagnitude > 1e-8f)
+            {
+                return atom.transform.InverseTransformDirection(-perpendicular.normalized);
+            }
+        }
+
+        if (groups.Count > 1) return GroupLocalDirection(atom, groups[1]);
+        return HybridizationTable.AnyPerpendicular(axis);
+    }
+
     // 結合手を「同じ相手に向かう束」にまとめる。
     // 余っている腕もいずれσ結合になるので、1本ずつ独立したまとまりとして数える
     private static List<ArmGroup> BuildArmGroups(Atom atom, Atom anchorNeighbor)
@@ -280,8 +415,10 @@ public static class MoleculeLayout
         List<ArmGroup> groups = new List<ArmGroup>();
         List<ArmGroup> freeArms = new List<ArmGroup>();
 
+        int armIndex = -1;
         foreach (BondPoint bp in atom.BondPoints)
         {
+            armIndex++;
             // π電子の腕は環に垂直に立てるので、σ骨格の勘定には入れない。
             // これで芳香環の炭素は「環2本＋水素1本」の3方向 ＝ sp2 と判定される
             if (bp.IsPiArm) continue;
@@ -290,7 +427,7 @@ public static class MoleculeLayout
 
             if (neighbor == null)
             {
-                ArmGroup free = new ArmGroup { Neighbor = null };
+                ArmGroup free = new ArmGroup { Neighbor = null, FirstArmIndex = armIndex };
                 free.Arms.Add(bp);
                 freeArms.Add(free);
                 continue;
@@ -299,11 +436,23 @@ public static class MoleculeLayout
             ArmGroup existing = groups.Find(g => g.Neighbor == neighbor);
             if (existing == null)
             {
-                existing = new ArmGroup { Neighbor = neighbor };
+                existing = new ArmGroup { Neighbor = neighbor, FirstArmIndex = armIndex };
                 groups.Add(existing);
             }
             existing.Arms.Add(bp);
         }
+
+        // 鎖の続き（さらに他の原子と繋がっている相手）を先に置く。
+        // 方位角 0° がアンチ配座の向きなので、そこに鎖の続きが来るとジグザグに伸びる。
+        // 水素のような行き止まりの相手が先に来てしまうと、鎖が横向きに折れて巻いてしまう。
+        //
+        // 繋がりの数が同じときは腕の並び順で決める。List.Sort は同順位の順番を保証しないので、
+        // ここで決めておかないと呼ぶたびに並びが変わり、腕の割り当てが入れ替わってしまう
+        groups.Sort((x, y) =>
+        {
+            int compare = CountConnections(y.Neighbor).CompareTo(CountConnections(x.Neighbor));
+            return compare != 0 ? compare : x.FirstArmIndex.CompareTo(y.FirstArmIndex);
+        });
 
         // 基準にする相手を先頭に持ってくる（そこを動かさずに残りを組み立てるため）
         if (anchorNeighbor != null)
@@ -319,6 +468,16 @@ public static class MoleculeLayout
 
         groups.AddRange(freeArms);
         return groups;
+    }
+
+    // その原子が何個の相手と繋がっているか。行き止まり（水素など）は 1 になる
+    private static int CountConnections(Atom atom)
+    {
+        if (atom == null || atom.BondPoints == null) return 0;
+
+        List<Atom> neighbors = new List<Atom>();
+        atom.GetDistinctNeighbors(neighbors);
+        return neighbors.Count;
     }
 
     // まとまり全体が向いている方向（＝σ結合の向き）を原子のローカル空間で求める
@@ -447,14 +606,25 @@ public static class MoleculeLayout
         float radius = SolveRingRadius(chords);
         if (radius <= 0f) return;
 
-        // 今の原子の位置から環の向きを推定する。プレイヤーが持ってきた向きを尊重したい
-        Vector3 center = Vector3.zero;
-        foreach (Atom a in ring) center += a.transform.position;
-        center /= count;
+        // 環の向きは「アンカー自身の結合手がどちらを向いているか」から決める。
+        // 全原子の位置の平均から求めると、環の原子が1つ引き伸ばされているだけで
+        // 重心も法線も傾き、環全体が回転して見えてしまう。
+        // アンカーの腕は他の原子が動いても影響を受けないので、こちらのほうが安定する
+        Atom previousOfAnchor = ring[(anchorIndex + count - 1) % count];
+        Atom nextOfAnchor = ring[(anchorIndex + 1) % count];
 
-        Vector3 normal = EstimateRingNormal(ring, center);
+        Vector3 toPrevious = ArmDirectionTo(anchor, previousOfAnchor);
+        Vector3 toNext = ArmDirectionTo(anchor, nextOfAnchor);
 
-        // 面内の基準軸。アンカーの向きを 0° に置く
+        Vector3 fallbackCenter = Vector3.zero;
+        foreach (Atom a in ring) fallbackCenter += a.transform.position;
+        fallbackCenter /= count;
+
+        Vector3 normal = Vector3.Cross(toPrevious, toNext);
+        if (normal.sqrMagnitude < 1e-8f) normal = EstimateRingNormal(ring, fallbackCenter);
+        normal.Normalize();
+
+        // 環の外向き（中心からアンカーへ向かう半径方向）
         Vector3 radial;
         if (outwardHint.HasValue)
         {
@@ -468,18 +638,23 @@ public static class MoleculeLayout
         }
         else
         {
-            radial = Vector3.ProjectOnPlane(anchor.transform.position - center, normal);
+            radial = -(toPrevious + toNext);
+            if (radial.sqrMagnitude < 1e-8f) radial = anchor.transform.position - fallbackCenter;
+
+            radial = Vector3.ProjectOnPlane(radial, normal);
             if (radial.sqrMagnitude < 1e-8f) radial = HybridizationTable.AnyPerpendicular(normal);
             radial.Normalize();
         }
 
         Vector3 side = Vector3.Cross(normal, radial);
 
-        // 環をたどる向きが、今の並びとどちら回りで一致するかを見る
-        Vector3 toNext = ring[(anchorIndex + 1) % count].transform.position - center;
-        float winding = Vector3.Dot(Vector3.ProjectOnPlane(toNext, normal), side) >= 0f ? 1f : -1f;
+        // 環をたどる向き。アンカーの「次の相手」へ向かう腕がどちら側にあるかで決める
+        float winding = Vector3.Dot(toNext, side) >= 0f ? 1f : -1f;
 
-        // 円周上に順番に置いていく
+        // アンカーがちょうど円周上の 0° に来るように中心を決める。
+        // こうするとアンカーは動かないので、あとから平行移動する必要がない
+        Vector3 center = anchor.transform.position - radius * radial;
+
         Vector3[] positions = new Vector3[count];
         float angle = 0f;
         for (int k = 0; k < count; k++)
@@ -491,11 +666,9 @@ public static class MoleculeLayout
             angle += 2f * Mathf.Asin(halfChord);
         }
 
-        // アンカーが動かないよう環全体を平行移動する
-        Vector3 shift = anchor.transform.position - positions[anchorIndex];
         for (int k = 0; k < count; k++)
         {
-            ring[k].transform.position = positions[k] + shift;
+            ring[k].transform.position = positions[k];
         }
 
         // 環の結合はまず両側そろえて向ける。
@@ -506,14 +679,17 @@ public static class MoleculeLayout
         }
 
         // 残りの腕（水素や置換基）を環の外側に配る
-        Vector3 finalCenter = center + shift;
         for (int k = 0; k < count; k++)
         {
             AssignOuterArms(
-                ring[k], ring[(k + count - 1) % count], ring[(k + 1) % count], finalCenter, normal);
+                ring[k], ring[(k + count - 1) % count], ring[(k + 1) % count], center, normal);
 
             // π電子の腕は環に垂直に立てる。p軌道が環の面と垂直に並ぶのと同じ向き
             AlignPiArms(ring[k], normal);
+
+            // 環のなかでも腕の向きは確定したので、記録を更新しておく。
+            // あとで環から外れたときに、変化の有無を正しく判定できるようにするため
+            ring[k].LayoutSignature = ring[k].ComputeGeometrySignature();
         }
 
         // 芳香環なら内側に円を出す（教科書の ⌬ 表記）
@@ -576,6 +752,18 @@ public static class MoleculeLayout
             else high = mid;
         }
         return (low + high) * 0.5f;
+    }
+
+    // その相手に向かっている腕が向いている方向（多重結合なら平均＝σ方向）
+    private static Vector3 ArmDirectionTo(Atom atom, Atom neighbor)
+    {
+        atom.GetBondPointsTo(neighbor, _scratchArms);
+        if (_scratchArms.Count == 0) return Vector3.zero;
+
+        Vector3 sum = Vector3.zero;
+        foreach (BondPoint bp in _scratchArms) sum += bp.Direction;
+
+        return sum.sqrMagnitude < 1e-8f ? Vector3.zero : sum.normalized;
     }
 
     // 今の原子の並びから環の法線を求める（ニューウェル法）
