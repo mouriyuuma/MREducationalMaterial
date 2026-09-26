@@ -165,7 +165,7 @@ public class MoleculeAnimator : MonoBehaviour
         }
     }
 
-    // 補間を打ち切って最終姿勢にする。Joint はこのあとに張られる
+    // 補間を打ち切って最終姿勢にする。後始末はこのあとに呼ばれる
     private void Finish()
     {
         foreach (Step step in _steps)
