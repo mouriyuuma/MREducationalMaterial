@@ -5,7 +5,7 @@ using UnityEngine;
 //
 //   1. 各原子の結合手を混成軌道（sp3 / sp2 / sp）に沿って向け直す
 //   2. 結合をたどって原子を並べ直し、腕の先どうしがぴったり重なるようにする
-//   3. FixedJoint を張り直して剛体として固定する
+//   3. 物理には任せず、原子を kinematic にして位置を確定させる
 //
 // 多重結合を作ると価電子対の数が変わるため、たとえば炭素は正四面体(109.47°)から
 // 平面三角(120°)へ組み替わる。その結果、隣に繋がっている原子も動かす必要があるので、
@@ -80,41 +80,46 @@ public static class MoleculeLayout
         PreserveCentroidIfReleased(atoms);
 
         // 最終姿勢は transform に入っているので、いったん元に戻して滑らかに動かす。
-        // Joint は補間が終わってから張る（動かしている最中に物理が引っぱり合うのを防ぐ）
+        // 後始末は補間が終わってから行う
         MoleculeAnimator.Play(
             seed.gameObject, _animTargets, _animFromPositions, _animFromRotations,
             () => FinishRebuild(atoms));
     }
 
-    // 補間が終わったあとの後始末。速度を止めて、結合を FixedJoint で固定する
+    // 補間が終わったあとの後始末。
+    //
+    // 以前はここで FixedJoint を張り直していたが、分子の形はこのクラスが、
+    // 掴んだときの移動は AtomInteraction.LateUpdate の追従が受け持っているので、
+    // 物理で同じことを二重にやる必要はない。
+    // Joint があると、両手で離れた2原子を掴んだときに間の原子が両側から引っ張られて暴れる
     private static void FinishRebuild(List<Atom> atoms)
     {
-        List<Atom> neighbors = new List<Atom>();
-
         foreach (Atom a in atoms)
         {
             if (a == null) continue;
 
             Rigidbody rb = a.GetComponent<Rigidbody>();
-            if (rb != null && !rb.isKinematic)
+            if (rb == null) continue;
+
+            if (!rb.isKinematic)
             {
                 rb.linearVelocity = Vector3.zero;
                 rb.angularVelocity = Vector3.zero;
             }
+
+            // 掴まれている間は SDK が kinematic を管理しているので触らない
+            AtomInteraction ai = a.GetComponent<AtomInteraction>();
+            if (ai == null || !ai.IsGrabbed) rb.isKinematic = true;
         }
 
+        // 分子の形が変わったので、掴んでいる手が持っている「分子の形」の控えを取り直す。
+        // 並べ直した直後のいまが正しい形なので、ここで控えるのがいちばん正確
         foreach (Atom a in atoms)
         {
             if (a == null) continue;
 
             AtomInteraction ai = a.GetComponent<AtomInteraction>();
-            if (ai == null) continue;
-
-            a.GetDistinctNeighbors(neighbors);
-            foreach (Atom neighbor in neighbors)
-            {
-                ai.CreateJointTo(neighbor);
-            }
+            if (ai != null) ai.RefreshCarryReference();
         }
     }
 
@@ -277,6 +282,36 @@ public static class MoleculeLayout
             }
         }
         return false;
+    }
+
+    // start 側の塊を集める。blocked の原子から先へはたどらない。
+    //
+    // 「この結合を切ったら、どちらの塊になるか」を求めるのに使う。
+    // 環のなかの結合だと別の道からも blocked に行けてしまい2つに分けられないので、
+    // その場合は blocked 単体だけが向こう側の塊になる（呼ぶ側で判断する）
+    public static void CollectFragment(Atom start, Atom blocked, List<Atom> result)
+    {
+        result.Clear();
+        if (start == null) return;
+
+        HashSet<Atom> visited = new HashSet<Atom> { start };
+        if (blocked != null) visited.Add(blocked);
+
+        Queue<Atom> queue = new Queue<Atom>();
+        queue.Enqueue(start);
+
+        while (queue.Count > 0)
+        {
+            Atom current = queue.Dequeue();
+            result.Add(current);
+
+            if (current.BondPoints == null) continue;
+            foreach (BondPoint bp in current.BondPoints)
+            {
+                Atom neighbor = bp.ConnectedAtom;
+                if (neighbor != null && visited.Add(neighbor)) queue.Enqueue(neighbor);
+            }
+        }
     }
 
     // 結合をたどって繋がっている原子をすべて集める
