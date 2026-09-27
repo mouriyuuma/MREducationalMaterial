@@ -20,5 +20,72 @@ MonoBehaviour:
   Description: "\u6700\u3082\u5358\u7D14\u306A\u30B1\u30C8\u30F3\u3002\u30AB\u30EB\u30DC\u30CB\u30EB\u57FA\u30922\u3064\u306E\u70AD\u7D20\u304C\u631F\u3080\u69CB\u9020\u3002\n\u30DE\u30CB\u30AD\u30E5\u30A2\u306E\u9664\u5149\u6DB2\u3084\u5857\u6599\u306E\u6EB6\u5264\u3068\u3057\u3066\u4F7F\u7528\u3055\u308C\u308B\u3002\n\u30A2\u30EB\u30C7\u30D2\u30C9\u3068\u7570\u306A\u308A\u9178\u5316\u3055\u308C\u306B\u304F\u3044\u6027\u8CEA\u3092\u6301\u3064\u3002"
   Categories: 33
   EncyclopediaModelPrefab: {fileID: 0}
-  RequiredAtoms: []
-  RequiredBonds: []
+  RequiredAtoms:
+  - AtomId: 0
+    ElementType: C
+  - AtomId: 1
+    ElementType: C
+  - AtomId: 2
+    ElementType: C
+  - AtomId: 3
+    ElementType: O
+  - AtomId: 4
+    ElementType: H
+  - AtomId: 5
+    ElementType: H
+  - AtomId: 6
+    ElementType: H
+  - AtomId: 7
+    ElementType: H
+  - AtomId: 8
+    ElementType: H
+  - AtomId: 9
+    ElementType: H
+  RequiredBonds:
+  - AtomIdA: 0
+    BondIndexA: 0
+    AtomIdB: 1
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 1
+    BondIndexA: 0
+    AtomIdB: 2
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 1
+    BondIndexA: 0
+    AtomIdB: 3
+    BondIndexB: 0
+    BondOrder: 2
+  - AtomIdA: 0
+    BondIndexA: 0
+    AtomIdB: 4
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 0
+    BondIndexA: 0
+    AtomIdB: 5
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 0
+    BondIndexA: 0
+    AtomIdB: 6
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 2
+    BondIndexA: 0
+    AtomIdB: 7
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 2
+    BondIndexA: 0
+    AtomIdB: 8
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 2
+    BondIndexA: 0
+    AtomIdB: 9
+    BondIndexB: 0
+    BondOrder: 1
+  Difficulty: 2
+  Hint: "\u771F\u3093\u4E2D\u306E\u70AD\u7D20\u306B\u9178\u7D20\u3092\u4E8C\u91CD\u7D50\u5408\u3067\u4ED8\u3051\u3001\u305D\u306E\u4E21\u5074\u306B\u30E1\u30C1\u30EB\u57FA\u3092\u3064\u306A\u304E\u307E\u3059\u3002"

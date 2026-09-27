@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(awk '/^def ring_report/{exit} {print}' C:/Users/mouri/AppData/Local/Temp/claude/c--Users-mouri-OneDrive-ProjectMember-test-MREducationalMaterial/2c1e7eb6-836d-4c7c-b45e-00786896a0da/scratchpad/ring2.py)",
+      "Bash(awk '/^# ---- 1\\\\\\)/,0' C:/Users/mouri/AppData/Local/Temp/claude/c--Users-mouri-OneDrive-ProjectMember-test-MREducationalMaterial/b24af9ef-d1d8-4a5f-9541-27e001e5e159/scratchpad/geom_check.py)",
+      "Bash(python regress.py)",
+      "Bash(python - C:/Users/mouri/AppData/Local/Temp/claude/c--Users-mouri-OneDrive-ProjectMember-test-MREducationalMaterial/2c1e7eb6-836d-4c7c-b45e-00786896a0da/scratchpad/aromatic.py)",
+      "Bash(python aromatic.py)"
+    ]
+  }
+}

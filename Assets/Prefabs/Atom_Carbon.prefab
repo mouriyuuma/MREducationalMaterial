@@ -46,10 +46,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26b224f691992344fab8d9b0556a78b0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  MainCylinder: {fileID: 8428639931135469868}
-  ExtraCylinders:
-  - {fileID: 0}
-  - {fileID: 0}
 --- !u!135 &4910499085355634505
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -227,10 +223,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26b224f691992344fab8d9b0556a78b0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  MainCylinder: {fileID: 7553957742375047906}
-  ExtraCylinders:
-  - {fileID: 0}
-  - {fileID: 0}
 --- !u!135 &3144685489869313203
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -408,10 +400,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26b224f691992344fab8d9b0556a78b0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  MainCylinder: {fileID: 1493838838752568394}
-  ExtraCylinders:
-  - {fileID: 0}
-  - {fileID: 0}
 --- !u!135 &1825141660516666532
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -950,10 +938,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26b224f691992344fab8d9b0556a78b0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  MainCylinder: {fileID: 1162957725213261298}
-  ExtraCylinders:
-  - {fileID: 0}
-  - {fileID: 0}
 --- !u!135 &3130712843567669991
 SphereCollider:
   m_ObjectHideFlags: 0

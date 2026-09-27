@@ -39,7 +39,7 @@ public class EncyclopediaManager : MonoBehaviour
             Button Button = ButtonObject.GetComponent<Button>();
 
             //text.font = japaneseFont;
-            text.text = molecule.MoleculeName; // 分子の名前を参照してテキストを生成
+            text.text = Molecule.MoleculeName; // 分子の名前を参照してテキストを生成
             Button.onClick.AddListener(() =>
             {
                 DetailPanel.Show(Molecule);

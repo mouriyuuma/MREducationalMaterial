@@ -20,5 +20,91 @@ MonoBehaviour:
   Description: "\u82B3\u9999\u65CF\u5316\u5408\u7269\u306E\u57FA\u672C\u9AA8\u683C\u3002\u516D\u54E1\u74B0\u69CB\u9020\u3092\u6301\u3064\u3002\n\u03C0\u96FB\u5B50\u304C\u975E\u5C40\u5728\u5316\u3057\u305F\u5171\u9CF4\u69CB\u9020\u306B\u3088\u308A\u975E\u5E38\u306B\u5B89\u5B9A\u3057\u3066\u3044\u308B\u3002\n\u767A\u304C\u3093\u6027\u304C\u3042\u308B\u305F\u3081\u53D6\u308A\u6271\u3044\u306B\u306F\u5341\u5206\u306A\u6CE8\u610F\u304C\u5FC5\u8981\u3002"
   Categories: 2
   EncyclopediaModelPrefab: {fileID: 0}
-  RequiredAtoms: []
-  RequiredBonds: []
+  RequiredAtoms:
+  - AtomId: 0
+    ElementType: C
+  - AtomId: 1
+    ElementType: C
+  - AtomId: 2
+    ElementType: C
+  - AtomId: 3
+    ElementType: C
+  - AtomId: 4
+    ElementType: C
+  - AtomId: 5
+    ElementType: C
+  - AtomId: 6
+    ElementType: H
+  - AtomId: 7
+    ElementType: H
+  - AtomId: 8
+    ElementType: H
+  - AtomId: 9
+    ElementType: H
+  - AtomId: 10
+    ElementType: H
+  - AtomId: 11
+    ElementType: H
+  RequiredBonds:
+  - AtomIdA: 0
+    BondIndexA: 0
+    AtomIdB: 1
+    BondIndexB: 0
+    BondOrder: 4
+  - AtomIdA: 1
+    BondIndexA: 0
+    AtomIdB: 2
+    BondIndexB: 0
+    BondOrder: 4
+  - AtomIdA: 2
+    BondIndexA: 0
+    AtomIdB: 3
+    BondIndexB: 0
+    BondOrder: 4
+  - AtomIdA: 3
+    BondIndexA: 0
+    AtomIdB: 4
+    BondIndexB: 0
+    BondOrder: 4
+  - AtomIdA: 4
+    BondIndexA: 0
+    AtomIdB: 5
+    BondIndexB: 0
+    BondOrder: 4
+  - AtomIdA: 5
+    BondIndexA: 0
+    AtomIdB: 0
+    BondIndexB: 0
+    BondOrder: 4
+  - AtomIdA: 0
+    BondIndexA: 0
+    AtomIdB: 6
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 1
+    BondIndexA: 0
+    AtomIdB: 7
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 2
+    BondIndexA: 0
+    AtomIdB: 8
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 3
+    BondIndexA: 0
+    AtomIdB: 9
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 4
+    BondIndexA: 0
+    AtomIdB: 10
+    BondIndexB: 0
+    BondOrder: 1
+  - AtomIdA: 5
+    BondIndexA: 0
+    AtomIdB: 11
+    BondIndexB: 0
+    BondOrder: 1
+  Difficulty: 3
+  Hint: "\u70AD\u7D206\u500B\u3092\u5358\u7D50\u5408\u3068\u4E8C\u91CD\u7D50\u5408\u304C\u4EA4\u4E92\u306B\u306A\u308B\u3088\u3046\u306B\u74B0\u306B\u3057\u307E\u3059\u3002\u74B0\u304C\u9589\u3058\u308B\u30686\u672C\u3068\u3082\u7B49\u4FA1\u306A\u7D50\u5408\u306B\u5909\u308F\u308A\u307E\u3059\u3002"

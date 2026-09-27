@@ -62,7 +62,7 @@ public class MoleculeData : ScriptableObject
     [Tooltip("この分子を構成する原子ノードのリスト")]
     public List<AtomNodeRequirement> RequiredAtoms;
     
-    [Tooltip("どの原子の、何番目の結合手（腕）同士が繋がっているべきかのリスト")]
+    [Tooltip("どの原子とどの原子が、何重結合で繋がっているべきかのリスト（結合1本につき1行）")]
     public List<BondEdgeRequirement> RequiredBonds;
 
     [Header("=== パズル用：追加情報 ===")]
@@ -81,14 +81,18 @@ public class BondEdgeRequirement
 {
     [Header("Atom A (接続元)")]
     public int AtomIdA;        // 原子AのID
-    public int BondIndexA;     // 原子Aの何番目の結合手（BondPoint）か
 
     [Header("Atom B (接続先)")]
     public int AtomIdB;        // 原子BのID
-    public int BondIndexB;     // 原子Bの何番目の結合手（BondPoint）か
+
+    // 判定は「どの原子とどの原子が繋がっているか」だけを見るので、腕の番号は使っていない。
+    // 同じ分子でも腕の使い方は何通りもあり、どれも正解とすべきため。
+    [HideInInspector] public int BondIndexA;
+    [HideInInspector] public int BondIndexB;
 
     [Header("Bond Properties")]
-    [Tooltip("何重結合か (1=単結合, 2=二重結合, 3=三重結合)")]
-    [Range(1, 3)] // Inspectorでスライダー表示にしておくと便利
+    [Tooltip("何重結合か (1=単結合, 2=二重結合, 3=三重結合, 4=芳香環)\n" +
+             "4 はベンゼン環の結合。単結合と二重結合の中間なので本数では表せず、別枠にしている")]
+    [Range(1, 4)] // Inspectorでスライダー表示にしておくと便利
     public int BondOrder = 1;
 }

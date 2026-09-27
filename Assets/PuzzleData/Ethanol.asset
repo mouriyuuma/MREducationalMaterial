@@ -23,38 +23,38 @@ MonoBehaviour:
   RequiredAtoms:
   - AtomId: 0
     ElementType: C
-  - AtomId: 0
+  - AtomId: 1
     ElementType: C
-  - AtomId: 0
-    ElementType: 
-  - AtomId: 0
+  - AtomId: 2
     ElementType: O
-  - AtomId: 0
+  - AtomId: 3
     ElementType: H
-  - AtomId: 0
+  - AtomId: 4
     ElementType: H
-  - AtomId: 0
+  - AtomId: 5
     ElementType: H
-  - AtomId: 0
+  - AtomId: 6
     ElementType: H
-  - AtomId: 0
+  - AtomId: 7
+    ElementType: H
+  - AtomId: 8
     ElementType: H
   RequiredBonds:
   - AtomIdA: 0
     BondIndexA: 0
     AtomIdB: 1
     BondIndexB: 0
-    BondOrder: 0
+    BondOrder: 1
   - AtomIdA: 1
     BondIndexA: 1
     AtomIdB: 2
     BondIndexB: 0
-    BondOrder: 0
+    BondOrder: 1
   - AtomIdA: 0
     BondIndexA: 1
     AtomIdB: 3
     BondIndexB: 0
-    BondOrder: 0
+    BondOrder: 1
   - AtomIdA: 0
     BondIndexA: 2
     AtomIdB: 4
@@ -74,7 +74,7 @@ MonoBehaviour:
     BondIndexA: 3
     AtomIdB: 7
     BondIndexB: 0
-    BondOrder: 0
+    BondOrder: 1
   - AtomIdA: 2
     BondIndexA: 1
     AtomIdB: 8
